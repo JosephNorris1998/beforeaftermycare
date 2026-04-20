@@ -36,6 +36,8 @@ class BAM_Reminder {
 		add_action( self::CRON_HOOK, array( $this, 'check_reminders' ) );
 		add_filter( 'wp_mail_from',      array( $this, 'mail_from' ) );
 		add_filter( 'wp_mail_from_name', array( $this, 'mail_from_name' ) );
+		add_shortcode( 'bam_recordatorio', array( $this, 'render_widget' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 	}
 
 	// ── Cron schedule ─────────────────────────────────────────────────────────
@@ -77,6 +79,115 @@ class BAM_Reminder {
 	}
 
 	// ── Mail sender filters ────────────────────────────────────────────────────
+
+	/**
+	 * Enqueue frontend CSS when the [bam_recordatorio] shortcode is on the page.
+	 */
+	public function enqueue_assets() {
+		global $post;
+		if ( ! is_a( $post, 'WP_Post' ) || ! has_shortcode( $post->post_content, 'bam_recordatorio' ) ) {
+			return;
+		}
+		$ver = get_option( 'bam_asset_version', BAM_VERSION );
+		wp_enqueue_style(
+			'bam-frontend',
+			BAM_PLUGIN_URL . 'assets/css/frontend.css',
+			array(),
+			$ver
+		);
+	}
+
+	// ── Shortcode: [bam_recordatorio] ─────────────────────────────────────────
+
+	/**
+	 * Render the appointment reminder widget for the logged-in patient.
+	 *
+	 * @return string HTML output.
+	 */
+	public function render_widget( $atts ) {
+		// Guest users – show nothing.
+		if ( ! is_user_logged_in() ) {
+			return '<div class="bam-reminder-widget-login">'
+				. '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+				. esc_html__( 'Inicia sesión para ver tu próxima cita.', 'beforeaftermycare' )
+				. '</div>';
+		}
+
+		$patient = BAM_Database::get_patient_by_wp_user_id( get_current_user_id() );
+
+		if ( ! $patient ) {
+			return '';
+		}
+
+		$reminder_hours = (int) get_option( 'bam_reminder_hours', self::DEFAULT_HOURS );
+
+		// Format procedure date.
+		if ( ! empty( $patient->fecha_procedimiento ) ) {
+			$ts        = strtotime( $patient->fecha_procedimiento );
+			$fecha_fmt = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $ts );
+			$is_future = $ts > time();
+		} else {
+			$fecha_fmt = __( 'Fecha por confirmar', 'beforeaftermycare' );
+			$is_future = false;
+		}
+
+		$procedimiento = ! empty( $patient->procedimiento ) ? $patient->procedimiento : __( 'Colonoscopia', 'beforeaftermycare' );
+
+		// Reminder status badge.
+		if ( $patient->recordatorio_enviado ) {
+			$status_badge = '<span style="color:#15803d;font-weight:700;">&#10003; ' . esc_html__( 'Recordatorio enviado', 'beforeaftermycare' ) . '</span>';
+		} elseif ( $is_future ) {
+			$status_badge = '<span style="color:#0096c7;font-weight:700;">&#9201; ' . sprintf(
+				/* translators: %d: hours */
+				esc_html__( 'Se enviará %d h antes', 'beforeaftermycare' ),
+				$reminder_hours
+			) . '</span>';
+		} else {
+			$status_badge = '<span style="color:#9ca3af;">' . esc_html__( 'Pendiente de programar', 'beforeaftermycare' ) . '</span>';
+		}
+
+		ob_start();
+		?>
+<div class="bam-reminder-widget">
+	<div class="bam-reminder-header">
+		<div class="bam-reminder-icon" aria-hidden="true">&#128276;</div>
+		<div class="bam-reminder-header-text">
+			<h3><?php esc_html_e( 'Tu Próxima Cita', 'beforeaftermycare' ); ?></h3>
+			<p><?php esc_html_e( 'Procedimiento médico programado', 'beforeaftermycare' ); ?></p>
+		</div>
+	</div>
+	<div class="bam-reminder-body">
+		<div class="bam-reminder-row">
+			<span class="bam-reminder-label"><?php esc_html_e( 'Paciente', 'beforeaftermycare' ); ?></span>
+			<span class="bam-reminder-value"><?php echo esc_html( $patient->nombre ); ?></span>
+		</div>
+		<div class="bam-reminder-row">
+			<span class="bam-reminder-label"><?php esc_html_e( 'Procedimiento', 'beforeaftermycare' ); ?></span>
+			<span class="bam-reminder-value"><?php echo esc_html( $procedimiento ); ?></span>
+		</div>
+		<div class="bam-reminder-row">
+			<span class="bam-reminder-label"><?php esc_html_e( 'Fecha y hora', 'beforeaftermycare' ); ?></span>
+			<span class="bam-reminder-value bam-reminder-date"><?php echo esc_html( $fecha_fmt ); ?></span>
+		</div>
+		<div class="bam-reminder-row">
+			<span class="bam-reminder-label"><?php esc_html_e( 'Recordatorio', 'beforeaftermycare' ); ?></span>
+			<span class="bam-reminder-value"><?php echo $status_badge; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+		</div>
+	</div>
+	<div class="bam-reminder-footer">
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+		<?php
+		printf(
+			/* translators: %d: hours */
+			esc_html__( 'El correo de recordatorio se enviará %d horas antes de tu procedimiento.', 'beforeaftermycare' ),
+			$reminder_hours
+		);
+		?>
+	</div>
+</div>
+		<?php
+		return ob_get_clean();
+	}
 
 	/**
 	 * Override the From email address only while sending reminders.

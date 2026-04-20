@@ -58,6 +58,23 @@ $reminder_options = array(
 			</div>
 		<?php endif; ?>
 
+		<!-- Shortcode info card -->
+		<div class="bam-card" style="margin-bottom:24px;border-left:4px solid #0096c7;background:linear-gradient(135deg,#e0f7fa,#f0fdff);">
+			<div style="padding:18px 24px;">
+				<p style="margin:0 0 10px;font-size:.9rem;font-weight:700;color:#0077b6;">
+					<svg style="vertical-align:-4px;margin-right:6px;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+					<?php esc_html_e( 'Widget de Recordatorio – Shortcode', 'beforeaftermycare' ); ?>
+				</p>
+				<p style="margin:0 0 12px;font-size:.875rem;color:#0369a1;line-height:1.6;">
+					<?php esc_html_e( 'Agrega el siguiente shortcode a cualquier página para mostrar a cada paciente (sesión iniciada) su próxima cita y el estado del recordatorio:', 'beforeaftermycare' ); ?>
+				</p>
+				<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+					<code style="background:#fff;color:#0077b6;padding:8px 18px;border-radius:8px;font-size:1rem;font-weight:700;border:1.5px solid #0096c7;letter-spacing:.03em;">[bam_recordatorio]</code>
+					<span style="font-size:.8rem;color:#64748b;"><?php esc_html_e( 'Muestra: nombre, procedimiento, fecha y estado del recordatorio.', 'beforeaftermycare' ); ?></span>
+				</div>
+			</div>
+		</div>
+
 		<div style="display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start;">
 
 			<!-- Settings card -->
