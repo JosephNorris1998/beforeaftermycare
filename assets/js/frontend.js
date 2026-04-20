@@ -81,8 +81,8 @@
     });
 
     // If there are validation errors, re-open the modal on page load
-    var hasErrors = modal && modal.querySelector('.bam-notice-error, .bam-field-error');
-    if (hasErrors) {
+    var errorElement = modal && modal.querySelector('.bam-notice-error, .bam-field-error');
+    if (errorElement) {
       openModal();
     }
   });

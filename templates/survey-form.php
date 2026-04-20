@@ -178,19 +178,19 @@ $old = function( $key ) {
 							<div class="bam-field">
 								<label class="bam-label"><?php esc_html_e( '¿Recomendarías este servicio a un familiar o amigo?', 'beforeaftermycare' ); ?></label>
 								<div class="bam-radio-group bam-radio-card-group">
-									<label class="bam-radio-card">
+									<label class="bam-radio-card" aria-label="<?php esc_attr_e( 'Sí recomendaría', 'beforeaftermycare' ); ?>">
 										<input type="radio" name="bam_recomendaria" value="Sí" <?php checked( $old( 'recomendaria' ), 'Sí' ); ?>>
-										<span class="bam-radio-card-icon">👍</span>
+										<span class="bam-radio-card-icon" aria-hidden="true">👍</span>
 										<span><?php esc_html_e( 'Sí', 'beforeaftermycare' ); ?></span>
 									</label>
-									<label class="bam-radio-card">
+									<label class="bam-radio-card" aria-label="<?php esc_attr_e( 'No recomendaría', 'beforeaftermycare' ); ?>">
 										<input type="radio" name="bam_recomendaria" value="No" <?php checked( $old( 'recomendaria' ), 'No' ); ?>>
-										<span class="bam-radio-card-icon">👎</span>
+										<span class="bam-radio-card-icon" aria-hidden="true">👎</span>
 										<span><?php esc_html_e( 'No', 'beforeaftermycare' ); ?></span>
 									</label>
-									<label class="bam-radio-card">
+									<label class="bam-radio-card" aria-label="<?php esc_attr_e( 'Tal vez recomendaría', 'beforeaftermycare' ); ?>">
 										<input type="radio" name="bam_recomendaria" value="Tal vez" <?php checked( $old( 'recomendaria' ), 'Tal vez' ); ?>>
-										<span class="bam-radio-card-icon">🤔</span>
+										<span class="bam-radio-card-icon" aria-hidden="true">🤔</span>
 										<span><?php esc_html_e( 'Tal vez', 'beforeaftermycare' ); ?></span>
 									</label>
 								</div>
