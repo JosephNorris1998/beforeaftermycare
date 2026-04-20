@@ -29,6 +29,7 @@ require_once BAM_PLUGIN_DIR . 'includes/class-bam-database.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-registration.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-admin.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-frontend-dashboard.php';
+require_once BAM_PLUGIN_DIR . 'includes/class-bam-survey.php';
 
 // ── Activation / Deactivation hooks ──────────────────────────────────────────
 register_activation_hook( __FILE__, 'bam_activate' );
@@ -49,8 +50,14 @@ function bam_init() {
 	// Load text domain for translations
 	load_plugin_textdomain( 'beforeaftermycare', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
+	// Run DB upgrade if needed (handles existing installs when plugin is updated).
+	if ( get_option( BAM_Database::DB_VERSION_KEY ) !== BAM_Database::DB_VERSION ) {
+		BAM_Database::install();
+	}
+
 	// Boot sub-systems
 	BAM_Registration::get_instance();
 	BAM_Admin::get_instance();
 	BAM_Frontend_Dashboard::get_instance();
+	BAM_Survey::get_instance();
 }

@@ -24,7 +24,7 @@ $old = function( $key ) {
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title><?php esc_html_e( 'Registro de Paciente', 'beforeaftermycare' ); ?> – <?php bloginfo( 'name' ); ?></title>
-	<link rel="stylesheet" href="<?php echo esc_url( BAM_PLUGIN_URL . 'assets/css/frontend.css' ); ?>?v=<?php echo esc_attr( BAM_VERSION ); ?>">
+	<link rel="stylesheet" href="<?php echo esc_url( BAM_PLUGIN_URL . 'assets/css/frontend.css' ); ?>?v=<?php echo esc_attr( get_option( 'bam_asset_version', BAM_VERSION ) ); ?>">
 	<style>
 		html, body {
 			margin: 0;
@@ -40,10 +40,19 @@ $old = function( $key ) {
 
 		<div class="bam-registration-header">
 			<div class="bam-logo-mark">
-				<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-					<circle cx="24" cy="24" r="24" fill="#0077b6"/>
-					<path d="M24 12c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12S30.627 12 24 12zm1 17h-2v-6h2v6zm0-8h-2v-2h2v2z" fill="#fff"/>
-				</svg>
+				<?php
+				$custom_logo_id = get_theme_mod( 'custom_logo' );
+				if ( $custom_logo_id ) {
+					echo wp_get_attachment_image( $custom_logo_id, array( 120, 60 ), false, array( 'class' => 'bam-site-logo', 'alt' => esc_attr( get_bloginfo( 'name' ) ) ) );
+				} else {
+					?>
+					<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+						<circle cx="24" cy="24" r="24" fill="#0077b6"/>
+						<path d="M24 12c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12S30.627 12 24 12zm1 17h-2v-6h2v6zm0-8h-2v-2h2v2z" fill="#fff"/>
+					</svg>
+					<?php
+				}
+				?>
 			</div>
 			<h1 class="bam-registration-title"><?php esc_html_e( 'Registro de Paciente', 'beforeaftermycare' ); ?></h1>
 			<p class="bam-registration-subtitle"><?php esc_html_e( 'Crea tu cuenta para acceder a tu guía médica personalizada.', 'beforeaftermycare' ); ?></p>
@@ -207,6 +216,6 @@ $old = function( $key ) {
 	</div>
 </div>
 
-<script src="<?php echo esc_url( BAM_PLUGIN_URL . 'assets/js/frontend.js' ); ?>?v=<?php echo esc_attr( BAM_VERSION ); ?>"></script>
+<script src="<?php echo esc_url( BAM_PLUGIN_URL . 'assets/js/frontend.js' ); ?>?v=<?php echo esc_attr( get_option( 'bam_asset_version', BAM_VERSION ) ); ?>"></script>
 </body>
 </html>

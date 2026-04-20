@@ -33,7 +33,8 @@ class BAM_Admin {
 		add_action( 'admin_menu',            array( $this, 'register_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_init',            array( $this, 'handle_actions' ) );
-		add_action( 'admin_post_bam_clear_cache', array( $this, 'handle_clear_cache' ) );
+		add_action( 'admin_post_bam_clear_cache',    array( $this, 'handle_clear_cache' ) );
+		add_action( 'admin_post_bam_save_survey_email', array( $this, 'handle_save_survey_email' ) );
 	}
 
 	// ── Menu ──────────────────────────────────────────────────────────────────
@@ -101,6 +102,16 @@ class BAM_Admin {
 			array( $this, 'page_cache' )
 		);
 		$this->page_hooks[] = $hook;
+
+		$hook = add_submenu_page(
+			self::MENU_SLUG,
+			__( 'Encuesta de Satisfacción', 'beforeaftermycare' ),
+			__( 'Encuesta', 'beforeaftermycare' ),
+			'manage_options',
+			'bam-survey',
+			array( $this, 'page_survey' )
+		);
+		$this->page_hooks[] = $hook;
 	}
 
 	// ── Assets ────────────────────────────────────────────────────────────────
@@ -111,18 +122,20 @@ class BAM_Admin {
 			return;
 		}
 
+		$ver = get_option( 'bam_asset_version', BAM_VERSION );
+
 		wp_enqueue_style(
 			'bam-admin',
 			BAM_PLUGIN_URL . 'assets/css/admin.css',
 			array(),
-			BAM_VERSION
+			$ver
 		);
 
 		wp_enqueue_script(
 			'bam-admin',
 			BAM_PLUGIN_URL . 'assets/js/admin.js',
 			array( 'jquery' ),
-			BAM_VERSION,
+			$ver,
 			true
 		);
 
@@ -253,21 +266,48 @@ class BAM_Admin {
 		include BAM_PLUGIN_DIR . 'templates/admin-cache.php';
 	}
 
+	/** Encuesta de Satisfacción page. */
+	public function page_survey() {
+		$msg         = isset( $_GET['bam_survey_msg'] ) ? sanitize_key( $_GET['bam_survey_msg'] ) : '';
+		$per_page    = 20;
+		$page        = isset( $_GET['paged'] ) ? absint( $_GET['paged'] ) : 1;
+		$result      = BAM_Database::get_survey_responses( $per_page, $page );
+		$responses   = $result['items'];
+		$total       = $result['total'];
+		$num_pages   = (int) ceil( $total / $per_page );
+		$stats       = BAM_Database::get_survey_stats();
+		$survey_email = get_option( 'bam_survey_email', get_option( 'admin_email' ) );
+		include BAM_PLUGIN_DIR . 'templates/admin-survey.php';
+	}
+
 	/**
-	 * Detect whether LiteSpeed Cache is available.
-	 *
-	 * @return bool
+	 * Handle saving the survey notification email.
 	 */
-	public static function litespeed_available() {
-		return class_exists( 'LiteSpeed_Cache_API' )
-			|| function_exists( 'litespeed_purge_all' )
-			|| has_action( 'litespeed_purge_all' );
+	public function handle_save_survey_email() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'No tienes permiso para realizar esta acción.', 'beforeaftermycare' ) );
+		}
+
+		if ( ! isset( $_POST['bam_survey_email_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bam_survey_email_nonce'] ) ), 'bam_save_survey_email' ) ) {
+			wp_die( esc_html__( 'Acción no autorizada.', 'beforeaftermycare' ) );
+		}
+
+		$email = isset( $_POST['bam_survey_email'] ) ? sanitize_email( wp_unslash( $_POST['bam_survey_email'] ) ) : '';
+
+		if ( is_email( $email ) ) {
+			update_option( 'bam_survey_email', $email );
+		}
+
+		wp_redirect( add_query_arg( array( 'page' => 'bam-survey', 'bam_survey_msg' => 'email_saved' ), admin_url( 'admin.php' ) ) );
+		exit;
 	}
 
 	/**
 	 * Handle the cache-clear POST action (hooked to admin_post_bam_clear_cache).
 	 */
 	public function handle_clear_cache() {
+		global $wpdb;
+
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'No tienes permiso para realizar esta acción.', 'beforeaftermycare' ) );
 		}
@@ -284,16 +324,8 @@ class BAM_Admin {
 		wp_cache_flush();
 		flush_rewrite_rules( false );
 
-		// 3. LiteSpeed Cache integration – purge all if available.
-		if ( self::litespeed_available() ) {
-			if ( class_exists( 'LiteSpeed_Cache_API' ) ) {
-				LiteSpeed_Cache_API::purge_all();
-			} elseif ( function_exists( 'litespeed_purge_all' ) ) {
-				litespeed_purge_all();
-			} else {
-				do_action( 'litespeed_purge_all' );
-			}
-		}
+		// 3. Bump asset version so browsers fetch updated plugin files.
+		update_option( 'bam_asset_version', time() );
 
 		// 4. W3 Total Cache / WP Super Cache integration.
 		if ( function_exists( 'w3tc_flush_all' ) ) {
