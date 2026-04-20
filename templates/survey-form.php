@@ -91,9 +91,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 											'momento_sala_preparacion' => __( 'Sala de preparación y recuperación', 'beforeaftermycare' ),
 											'momento_salida_hospital'  => __( 'Salida del hospital', 'beforeaftermycare' ),
 										);
-										// phpcs:ignore WordPress.Security.NonceVerification
+										// phpcs:disable WordPress.Security.NonceVerification
 										foreach ( $momentos as $field => $label ) :
-											$old_val = isset( $_POST[ 'bam_' . $field ] ) ? absint( $_POST[ 'bam_' . $field ] ) : 0;
+											$old_val = isset( $_POST[ 'bam_' . $field ] ) ? absint( $_POST[ 'bam_' . $field ] ) : 0; // phpcs:enable
 										?>
 											<tr>
 												<td class="bam-rt-moment-col"><span><?php echo esc_html( $label ); ?></span></td>
