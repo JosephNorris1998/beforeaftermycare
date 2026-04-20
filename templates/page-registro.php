@@ -40,19 +40,7 @@ $old = function( $key ) {
 
 		<div class="bam-registration-header">
 			<div class="bam-logo-mark">
-				<?php
-				$custom_logo_id = get_theme_mod( 'custom_logo' );
-				if ( $custom_logo_id ) {
-					echo wp_get_attachment_image( $custom_logo_id, array( 120, 60 ), false, array( 'class' => 'bam-site-logo', 'alt' => esc_attr( get_bloginfo( 'name' ) ) ) );
-				} else {
-					?>
-					<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-						<circle cx="24" cy="24" r="24" fill="#0077b6"/>
-						<path d="M24 12c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12S30.627 12 24 12zm1 17h-2v-6h2v6zm0-8h-2v-2h2v2z" fill="#fff"/>
-					</svg>
-					<?php
-				}
-				?>
+				<img src="https://pacificasalud.beforeaftermycare.com/wp-content/uploads/2026/04/logo_web_main.svg" alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>" class="bam-site-logo">
 			</div>
 			<h1 class="bam-registration-title"><?php esc_html_e( 'Registro de Paciente', 'beforeaftermycare' ); ?></h1>
 			<p class="bam-registration-subtitle"><?php esc_html_e( 'Crea tu cuenta para acceder a tu guía médica personalizada.', 'beforeaftermycare' ); ?></p>

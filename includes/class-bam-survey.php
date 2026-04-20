@@ -49,6 +49,14 @@ class BAM_Survey {
 			array(),
 			$ver
 		);
+
+		wp_enqueue_script(
+			'bam-frontend',
+			BAM_PLUGIN_URL . 'assets/js/frontend.js',
+			array(),
+			$ver,
+			true
+		);
 	}
 
 	// ── Shortcode ─────────────────────────────────────────────────────────────
