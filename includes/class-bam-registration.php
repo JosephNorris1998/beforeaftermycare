@@ -27,10 +27,67 @@ class BAM_Registration {
 		return self::$instance;
 	}
 
+	/** Slug of the auto-created registration page. */
+	const PAGE_SLUG = 'registro';
+
 	private function __construct() {
 		add_shortcode( 'bam_registro', array( $this, 'render_form' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'init', array( $this, 'handle_registration' ) );
+		add_filter( 'template_include', array( $this, 'intercept_template' ) );
+	}
+
+	// ── Page creation ──────────────────────────────────────────────────────────
+
+	/**
+	 * Create the registration page (called on plugin activation).
+	 */
+	public static function create_page() {
+		if ( get_page_by_path( self::PAGE_SLUG ) ) {
+			return; // Already exists – nothing to do.
+		}
+
+		wp_insert_post( array(
+			'post_title'   => __( 'Registro de Paciente', 'beforeaftermycare' ),
+			'post_name'    => self::PAGE_SLUG,
+			'post_status'  => 'publish',
+			'post_type'    => 'page',
+			'post_content' => '',
+		) );
+	}
+
+	// ── Template override (no Elementor) ──────────────────────────────────────
+
+	/**
+	 * Replace the theme/Elementor template for the registration page with our
+	 * own standalone full-HTML template.
+	 *
+	 * @param string $template
+	 * @return string
+	 */
+	public function intercept_template( $template ) {
+		if ( ! is_page( self::PAGE_SLUG ) ) {
+			return $template;
+		}
+
+		// Logged-in users are redirected straight to their guide.
+		if ( is_user_logged_in() ) {
+			wp_redirect( BAM_REDIRECT_URL );
+			exit;
+		}
+
+		return BAM_PLUGIN_DIR . 'templates/page-registro.php';
+	}
+
+	// ── Public error accessor (used by templates) ─────────────────────────────
+
+	/**
+	 * Static helper for templates: fetch (and clear) form errors from session.
+	 *
+	 * @return array
+	 */
+	public static function get_errors() {
+		return self::get_instance()->get_form_errors();
 	}
 
 	// ── Assets ────────────────────────────────────────────────────────────────
@@ -215,7 +272,7 @@ class BAM_Registration {
 	 *
 	 * @return array
 	 */
-	private function get_form_errors() {
+	public function get_form_errors() {
 		$this->maybe_start_session();
 		$errors = $_SESSION['bam_errors'] ?? array();
 		unset( $_SESSION['bam_errors'] );
