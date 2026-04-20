@@ -33,8 +33,9 @@ class BAM_Admin {
 		add_action( 'admin_menu',            array( $this, 'register_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_init',            array( $this, 'handle_actions' ) );
-		add_action( 'admin_post_bam_clear_cache',    array( $this, 'handle_clear_cache' ) );
-		add_action( 'admin_post_bam_save_survey_email', array( $this, 'handle_save_survey_email' ) );
+		add_action( 'admin_post_bam_clear_cache',          array( $this, 'handle_clear_cache' ) );
+		add_action( 'admin_post_bam_save_survey_email',    array( $this, 'handle_save_survey_email' ) );
+		add_action( 'admin_post_bam_save_reminder_hours',  array( $this, 'handle_save_reminder_hours' ) );
 	}
 
 	// ── Menu ──────────────────────────────────────────────────────────────────
@@ -110,6 +111,16 @@ class BAM_Admin {
 			'manage_options',
 			'bam-survey',
 			array( $this, 'page_survey' )
+		);
+		$this->page_hooks[] = $hook;
+
+		$hook = add_submenu_page(
+			self::MENU_SLUG,
+			__( 'Recordatorios', 'beforeaftermycare' ),
+			__( 'Recordatorios', 'beforeaftermycare' ),
+			'manage_options',
+			'bam-reminders',
+			array( $this, 'page_reminders' )
 		);
 		$this->page_hooks[] = $hook;
 	}
@@ -200,6 +211,23 @@ class BAM_Admin {
 				'telefono'      => sanitize_text_field( wp_unslash( $_POST['bam_telefono']       ?? '' ) ) ?: null,
 				'guia_asignada' => sanitize_text_field( wp_unslash( $_POST['bam_guia_asignada']  ?? '' ) ) ?: null,
 			);
+
+			$new_fecha = sanitize_text_field( wp_unslash( $_POST['bam_fecha_procedimiento'] ?? '' ) );
+			if ( $new_fecha ) {
+				$data['fecha_procedimiento'] = gmdate( 'Y-m-d H:i:s', strtotime( $new_fecha ) );
+			} else {
+				$data['fecha_procedimiento'] = null;
+			}
+
+			$new_proc = sanitize_text_field( wp_unslash( $_POST['bam_procedimiento'] ?? '' ) );
+			$data['procedimiento'] = $new_proc ?: null;
+
+			// If procedure date changed, reset reminder flag.
+			$patient_before = BAM_Database::get_patient( $patient_id );
+			$old_fecha      = $patient_before ? $patient_before->fecha_procedimiento : '';
+			if ( $old_fecha !== ( $data['fecha_procedimiento'] ?? '' ) ) {
+				$data['recordatorio_enviado'] = 0;
+			}
 
 			BAM_Database::update_patient( $patient_id, $data );
 
@@ -342,6 +370,32 @@ class BAM_Admin {
 		}
 
 		wp_redirect( add_query_arg( array( 'page' => 'bam-cache', 'bam_cache_msg' => 'cleared' ), admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/** Recordatorios page. */
+	public function page_reminders() {
+		$msg           = isset( $_GET['bam_reminder_msg'] ) ? sanitize_key( $_GET['bam_reminder_msg'] ) : '';
+		$reminder_hours = (int) get_option( 'bam_reminder_hours', BAM_Reminder::DEFAULT_HOURS );
+		include BAM_PLUGIN_DIR . 'templates/admin-reminders.php';
+	}
+
+	/**
+	 * Handle saving the reminder hours setting.
+	 */
+	public function handle_save_reminder_hours() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'No tienes permiso para realizar esta acción.', 'beforeaftermycare' ) );
+		}
+
+		if ( ! isset( $_POST['bam_reminder_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bam_reminder_nonce'] ) ), 'bam_save_reminder_hours' ) ) {
+			wp_die( esc_html__( 'Acción no autorizada.', 'beforeaftermycare' ) );
+		}
+
+		$hours = isset( $_POST['bam_reminder_hours'] ) ? absint( $_POST['bam_reminder_hours'] ) : BAM_Reminder::DEFAULT_HOURS;
+		update_option( 'bam_reminder_hours', $hours );
+
+		wp_redirect( add_query_arg( array( 'page' => 'bam-reminders', 'bam_reminder_msg' => 'saved' ), admin_url( 'admin.php' ) ) );
 		exit;
 	}
 }
