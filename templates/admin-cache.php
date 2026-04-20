@@ -31,6 +31,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<a class="bam-nav-link bam-nav-active" href="<?php echo esc_url( admin_url( 'admin.php?page=bam-cache' ) ); ?>">
 				<?php esc_html_e( 'Limpiar Caché', 'beforeaftermycare' ); ?>
 			</a>
+			<a class="bam-nav-link" href="<?php echo esc_url( admin_url( 'admin.php?page=bam-survey' ) ); ?>">
+				<?php esc_html_e( 'Encuesta', 'beforeaftermycare' ); ?>
+			</a>
 		</nav>
 	</header>
 
@@ -71,8 +74,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
 				</div>
 				<div class="bam-stat-info">
-					<span class="bam-stat-label" style="font-size:.85rem;font-weight:600;color:var(--bam-text);"><?php esc_html_e( 'LiteSpeed Cache', 'beforeaftermycare' ); ?></span>
-					<span class="bam-stat-label"><?php esc_html_e( 'Purga total de LiteSpeed si está instalado', 'beforeaftermycare' ); ?></span>
+					<span class="bam-stat-label" style="font-size:.85rem;font-weight:600;color:var(--bam-text);"><?php esc_html_e( 'Versión de Assets', 'beforeaftermycare' ); ?></span>
+					<span class="bam-stat-label"><?php esc_html_e( 'Fuerza al navegador a cargar la versión más reciente del plugin', 'beforeaftermycare' ); ?></span>
 				</div>
 			</div>
 			<div class="bam-stat-card">
@@ -96,7 +99,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</div>
 			<div style="padding:24px;">
 				<p style="color:var(--bam-muted);margin:0 0 20px;font-size:.9rem;">
-					<?php esc_html_e( 'Esta acción eliminará todos los datos de caché relacionados con el plugin: transients de la base de datos, caché de objetos de WordPress, caché de LiteSpeed (si está activo) y recargará las reglas de permalinks. El navegador recibirá las páginas actualizadas.', 'beforeaftermycare' ); ?>
+					<?php esc_html_e( 'Esta acción eliminará todos los datos de caché del plugin: transients de la base de datos, caché de objetos de WordPress y recargará las reglas de permalinks. También actualiza la versión de los archivos CSS/JS del plugin para que el navegador descargue la versión más reciente.', 'beforeaftermycare' ); ?>
 				</p>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="bam_clear_cache">
@@ -106,34 +109,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 						<?php esc_html_e( 'Limpiar Toda la Caché Ahora', 'beforeaftermycare' ); ?>
 					</button>
 				</form>
-			</div>
-		</div>
-
-		<?php
-		// Show LiteSpeed status using the shared detection helper.
-		$ls_active = BAM_Admin::litespeed_available();
-		?>
-		<div class="bam-card">
-			<div class="bam-card-header">
-				<h2 class="bam-card-title">
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-					<?php esc_html_e( 'Estado de LiteSpeed Cache', 'beforeaftermycare' ); ?>
-				</h2>
-			</div>
-			<div style="padding:20px 24px;">
-				<?php if ( $ls_active ) : ?>
-					<div class="bam-cache-status bam-cache-status-ok">
-						<span class="bam-cache-dot bam-cache-dot-ok"></span>
-						<strong><?php esc_html_e( 'LiteSpeed Cache detectado', 'beforeaftermycare' ); ?></strong>
-						<span style="color:var(--bam-muted);margin-left:8px;font-size:.85rem;"><?php esc_html_e( '– se incluirá en la limpieza automáticamente.', 'beforeaftermycare' ); ?></span>
-					</div>
-				<?php else : ?>
-					<div class="bam-cache-status bam-cache-status-off">
-						<span class="bam-cache-dot bam-cache-dot-off"></span>
-						<strong><?php esc_html_e( 'LiteSpeed Cache no detectado', 'beforeaftermycare' ); ?></strong>
-						<span style="color:var(--bam-muted);margin-left:8px;font-size:.85rem;"><?php esc_html_e( '– plugin de LiteSpeed no está instalado o activo.', 'beforeaftermycare' ); ?></span>
-					</div>
-				<?php endif; ?>
 			</div>
 		</div>
 
@@ -150,7 +125,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<li><?php esc_html_e( 'Si después de limpiar la caché del servidor sigues viendo contenido antiguo, fuerza la recarga del navegador con Ctrl+Shift+R (Windows/Linux) o Cmd+Shift+R (Mac).', 'beforeaftermycare' ); ?></li>
 					<li><?php esc_html_e( 'Para limpiar la caché del navegador Chrome: Configuración → Privacidad → Borrar datos de navegación → Imágenes y archivos en caché.', 'beforeaftermycare' ); ?></li>
 					<li><?php esc_html_e( 'El plugin usa el header "Cache-Control: no-store" en el área de administración para evitar que el navegador almacene páginas del dashboard.', 'beforeaftermycare' ); ?></li>
-					<li><?php esc_html_e( 'LiteSpeed Cache excluye automáticamente a los usuarios logueados y el wp-admin del caché.', 'beforeaftermycare' ); ?></li>
+					<li><?php esc_html_e( 'Al hacer clic en "Limpiar Toda la Caché", los archivos CSS y JS del plugin recibirán un nuevo número de versión, forzando al navegador a descargar los archivos actualizados.', 'beforeaftermycare' ); ?></li>
 				</ul>
 			</div>
 		</div>

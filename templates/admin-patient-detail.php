@@ -34,6 +34,9 @@ $msg = isset( $_GET['bam_msg'] ) ? sanitize_key( $_GET['bam_msg'] ) : '';
 			<a class="bam-nav-link" href="<?php echo esc_url( admin_url( 'admin.php?page=bam-cache' ) ); ?>">
 				<?php esc_html_e( 'Limpiar Caché', 'beforeaftermycare' ); ?>
 			</a>
+			<a class="bam-nav-link" href="<?php echo esc_url( admin_url( 'admin.php?page=bam-survey' ) ); ?>">
+				<?php esc_html_e( 'Encuesta', 'beforeaftermycare' ); ?>
+			</a>
 		</nav>
 	</header>
 

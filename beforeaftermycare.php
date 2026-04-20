@@ -29,6 +29,7 @@ require_once BAM_PLUGIN_DIR . 'includes/class-bam-database.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-registration.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-admin.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-frontend-dashboard.php';
+require_once BAM_PLUGIN_DIR . 'includes/class-bam-survey.php';
 
 // ── Activation / Deactivation hooks ──────────────────────────────────────────
 register_activation_hook( __FILE__, 'bam_activate' );
@@ -53,4 +54,5 @@ function bam_init() {
 	BAM_Registration::get_instance();
 	BAM_Admin::get_instance();
 	BAM_Frontend_Dashboard::get_instance();
+	BAM_Survey::get_instance();
 }

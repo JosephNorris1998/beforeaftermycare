@@ -11,10 +11,13 @@ class BAM_Database {
 
 	/** @var string DB version key used for upgrade checks. */
 	const DB_VERSION_KEY = 'bam_db_version';
-	const DB_VERSION     = '1.0';
+	const DB_VERSION     = '1.1';
 
 	/** @var string Patients table name (without prefix). */
 	const TABLE_PATIENTS = 'bam_patients';
+
+	/** @var string Survey responses table name (without prefix). */
+	const TABLE_SURVEY = 'bam_survey_responses';
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -25,7 +28,9 @@ class BAM_Database {
 		global $wpdb;
 
 		$charset_collate = $wpdb->get_charset_collate();
-		$table           = $wpdb->prefix . self::TABLE_PATIENTS;
+
+		// Patients table.
+		$table = $wpdb->prefix . self::TABLE_PATIENTS;
 
 		$sql = "CREATE TABLE {$table} (
 			id            BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -40,6 +45,26 @@ class BAM_Database {
 			PRIMARY KEY  (id),
 			UNIQUE KEY uq_usuario (usuario),
 			UNIQUE KEY uq_correo  (correo)
+		) {$charset_collate};";
+
+		// Survey responses table.
+		$survey_table = $wpdb->prefix . self::TABLE_SURVEY;
+
+		$sql .= "CREATE TABLE {$survey_table} (
+			id              BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+			patient_id      BIGINT(20) UNSIGNED          DEFAULT NULL,
+			patient_name    VARCHAR(200)        NOT NULL DEFAULT '',
+			patient_email   VARCHAR(200)        NOT NULL DEFAULT '',
+			calificacion    TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+			guia_util       TINYINT(1)          NOT NULL DEFAULT 0,
+			atencion        VARCHAR(20)                  DEFAULT NULL,
+			recomendaria    VARCHAR(20)                  DEFAULT NULL,
+			aspectos_mejora VARCHAR(500)                 DEFAULT NULL,
+			comentarios     TEXT                         DEFAULT NULL,
+			fecha_envio     DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			KEY idx_patient_id (patient_id),
+			KEY idx_fecha_envio (fecha_envio)
 		) {$charset_collate};";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -286,5 +311,104 @@ class BAM_Database {
 			 LIMIT 10"
 		) ?: array();
 		// phpcs:enable
+	}
+
+	// ── Survey ────────────────────────────────────────────────────────────────
+
+	/**
+	 * Insert a new survey response.
+	 *
+	 * @param array $data Keys: patient_id, patient_name, patient_email, calificacion,
+	 *                          guia_util, atencion, recomendaria, aspectos_mejora, comentarios.
+	 * @return int|false Inserted ID or false on error.
+	 */
+	public static function insert_survey_response( array $data ) {
+		global $wpdb;
+
+		$defaults = array(
+			'patient_id'      => null,
+			'patient_name'    => '',
+			'patient_email'   => '',
+			'calificacion'    => 0,
+			'guia_util'       => 0,
+			'atencion'        => null,
+			'recomendaria'    => null,
+			'aspectos_mejora' => null,
+			'comentarios'     => null,
+			'fecha_envio'     => current_time( 'mysql' ),
+		);
+
+		$row = wp_parse_args( $data, $defaults );
+
+		$result = $wpdb->insert(
+			$wpdb->prefix . self::TABLE_SURVEY,
+			$row,
+			array( '%d', '%s', '%s', '%d', '%d', '%s', '%s', '%s', '%s', '%s' )
+		);
+
+		return $result ? (int) $wpdb->insert_id : false;
+	}
+
+	/**
+	 * Fetch a paginated list of survey responses.
+	 *
+	 * @param int $per_page
+	 * @param int $page     1-based.
+	 * @return array { items: array, total: int }
+	 */
+	public static function get_survey_responses( $per_page = 20, $page = 1 ) {
+		global $wpdb;
+
+		$table  = $wpdb->prefix . self::TABLE_SURVEY;
+		$offset = ( max( 1, (int) $page ) - 1 ) * (int) $per_page;
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$items = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} ORDER BY fecha_envio DESC LIMIT %d OFFSET %d",
+				(int) $per_page,
+				(int) $offset
+			)
+		);
+
+		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
+		// phpcs:enable
+
+		return array(
+			'items' => $items ?: array(),
+			'total' => $total,
+		);
+	}
+
+	/**
+	 * Get aggregate statistics for the satisfaction survey.
+	 *
+	 * @return array Keyed stats array.
+	 */
+	public static function get_survey_stats() {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_SURVEY;
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$total      = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
+		$avg_rating = (float) $wpdb->get_var( "SELECT AVG(calificacion) FROM {$table} WHERE calificacion > 0" );
+		$guia_util  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE guia_util = 1" );
+
+		$atencion_dist = $wpdb->get_results(
+			"SELECT atencion, COUNT(*) as count FROM {$table} WHERE atencion IS NOT NULL GROUP BY atencion ORDER BY count DESC"
+		) ?: array();
+
+		$recomienda_dist = $wpdb->get_results(
+			"SELECT recomendaria, COUNT(*) as count FROM {$table} WHERE recomendaria IS NOT NULL GROUP BY recomendaria ORDER BY count DESC"
+		) ?: array();
+		// phpcs:enable
+
+		return array(
+			'total'           => $total,
+			'avg_rating'      => round( $avg_rating, 1 ),
+			'guia_util'       => $guia_util,
+			'atencion_dist'   => $atencion_dist,
+			'recomienda_dist' => $recomienda_dist,
+		);
 	}
 }

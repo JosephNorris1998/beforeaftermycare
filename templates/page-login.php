@@ -21,7 +21,7 @@ $error = isset( $_GET['bam_login_error'] ) ? sanitize_key( $_GET['bam_login_erro
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title><?php esc_html_e( 'Acceso – Guías Médicas', 'beforeaftermycare' ); ?> – <?php bloginfo( 'name' ); ?></title>
-	<link rel="stylesheet" href="<?php echo esc_url( BAM_PLUGIN_URL . 'assets/css/admin.css' ); ?>?v=<?php echo esc_attr( BAM_VERSION ); ?>">
+	<link rel="stylesheet" href="<?php echo esc_url( BAM_PLUGIN_URL . 'assets/css/admin.css' ); ?>?v=<?php echo esc_attr( get_option( 'bam_asset_version', BAM_VERSION ) ); ?>">
 	<style>
 		html, body { margin: 0; padding: 0; }
 	</style>
@@ -34,10 +34,19 @@ $error = isset( $_GET['bam_login_error'] ) ? sanitize_key( $_GET['bam_login_erro
 
 		<div class="bam-login-header">
 			<div class="bam-login-logo">
-				<svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-					<circle cx="24" cy="24" r="24" fill="#0077b6"/>
-					<path d="M24 12c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12S30.627 12 24 12zm1 17h-2v-6h2v6zm0-8h-2v-2h2v2z" fill="#fff"/>
-				</svg>
+				<?php
+				$custom_logo_id = get_theme_mod( 'custom_logo' );
+				if ( $custom_logo_id ) {
+					echo wp_get_attachment_image( $custom_logo_id, array( 120, 60 ), false, array( 'class' => 'bam-site-logo', 'alt' => esc_attr( get_bloginfo( 'name' ) ) ) );
+				} else {
+					?>
+					<svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+						<circle cx="24" cy="24" r="24" fill="#0077b6"/>
+						<path d="M24 12c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12S30.627 12 24 12zm1 17h-2v-6h2v6zm0-8h-2v-2h2v2z" fill="#fff"/>
+					</svg>
+					<?php
+				}
+				?>
 			</div>
 			<h1 class="bam-login-title"><?php esc_html_e( 'Guías Médicas', 'beforeaftermycare' ); ?></h1>
 			<p class="bam-login-subtitle"><?php esc_html_e( 'Accede al panel de administración', 'beforeaftermycare' ); ?></p>

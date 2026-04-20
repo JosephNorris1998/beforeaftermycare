@@ -139,18 +139,20 @@ class BAM_Registration {
 			return;
 		}
 
+		$ver = get_option( 'bam_asset_version', BAM_VERSION );
+
 		wp_enqueue_style(
 			'bam-frontend',
 			BAM_PLUGIN_URL . 'assets/css/frontend.css',
 			array(),
-			BAM_VERSION
+			$ver
 		);
 
 		wp_enqueue_script(
 			'bam-frontend',
 			BAM_PLUGIN_URL . 'assets/js/frontend.js',
 			array(),
-			BAM_VERSION,
+			$ver,
 			true
 		);
 	}
