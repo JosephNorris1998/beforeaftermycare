@@ -59,11 +59,17 @@ $msg = isset( $_GET['bam_survey_msg'] ) ? sanitize_key( $_GET['bam_survey_msg'] 
 		<?php endif; ?>
 
 		<!-- Shortcode info -->
-		<div class="bam-notice" style="background:#e8f4fd;border-left:4px solid #0077b6;padding:12px 16px;margin-bottom:20px;border-radius:4px;">
-			<strong><?php esc_html_e( 'Shortcode:', 'beforeaftermycare' ); ?></strong>
-			<code style="background:#fff;padding:2px 8px;border-radius:3px;font-size:.9rem;">[bam_encuesta]</code>
-			&nbsp;–&nbsp;
-			<?php esc_html_e( 'Agrega este shortcode a cualquier página para mostrar la encuesta.', 'beforeaftermycare' ); ?>
+		<div class="bam-notice" style="background:#e8f4fd;border-left:4px solid #0077b6;padding:12px 16px;margin-bottom:20px;border-radius:4px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;">
+			<span>
+				<strong><?php esc_html_e( 'Encuesta:', 'beforeaftermycare' ); ?></strong>
+				<code style="background:#fff;padding:2px 8px;border-radius:3px;font-size:.9rem;">[bam_encuesta]</code>
+			</span>
+			<span style="color:#64748b;font-size:.85rem;"><?php esc_html_e( 'Agrega a cualquier página para mostrar la encuesta de satisfacción.', 'beforeaftermycare' ); ?></span>
+			<span style="border-left:1px solid #bae6fd;padding-left:16px;">
+				<strong><?php esc_html_e( 'Recordatorio:', 'beforeaftermycare' ); ?></strong>
+				<code style="background:#fff;padding:2px 8px;border-radius:3px;font-size:.9rem;">[bam_recordatorio]</code>
+			</span>
+			<span style="color:#64748b;font-size:.85rem;"><?php esc_html_e( 'Muestra la próxima cita del paciente y el estado del recordatorio.', 'beforeaftermycare' ); ?></span>
 		</div>
 
 		<!-- Stat cards -->
@@ -84,22 +90,17 @@ $msg = isset( $_GET['bam_survey_msg'] ) ? sanitize_key( $_GET['bam_survey_msg'] 
 				</div>
 				<div class="bam-stat-info">
 					<span class="bam-stat-value"><?php echo esc_html( $stats['avg_rating'] > 0 ? $stats['avg_rating'] . ' / 5' : '—' ); ?></span>
-					<span class="bam-stat-label"><?php esc_html_e( 'Calificación promedio', 'beforeaftermycare' ); ?></span>
+					<span class="bam-stat-label"><?php esc_html_e( 'Satisfacción global prom.', 'beforeaftermycare' ); ?></span>
 				</div>
 			</div>
 
 			<div class="bam-stat-card">
 				<div class="bam-stat-icon bam-icon-green">
-					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>
 				</div>
 				<div class="bam-stat-info">
-					<span class="bam-stat-value">
-						<?php
-						$guia_pct = $stats['total'] > 0 ? round( ( $stats['guia_util'] / $stats['total'] ) * 100 ) : 0;
-						echo esc_html( $guia_pct . '%' );
-						?>
-					</span>
-					<span class="bam-stat-label"><?php esc_html_e( 'Guía fue útil', 'beforeaftermycare' ); ?></span>
+					<span class="bam-stat-value"><?php echo esc_html( $stats['avg_indicaciones'] > 0 ? $stats['avg_indicaciones'] . ' / 5' : '—' ); ?></span>
+					<span class="bam-stat-label"><?php esc_html_e( 'Prom. Indicaciones prep.', 'beforeaftermycare' ); ?></span>
 				</div>
 			</div>
 
@@ -108,73 +109,43 @@ $msg = isset( $_GET['bam_survey_msg'] ) ? sanitize_key( $_GET['bam_survey_msg'] 
 					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
 				</div>
 				<div class="bam-stat-info">
-					<?php
-					$si_count = 0;
-					foreach ( $stats['recomienda_dist'] as $r ) {
-						if ( 'Sí' === $r->recomendaria ) {
-							$si_count = (int) $r->count;
-							break;
-						}
-					}
-					$recom_pct = $stats['total'] > 0 ? round( ( $si_count / $stats['total'] ) * 100 ) : 0;
-					?>
-					<span class="bam-stat-value"><?php echo esc_html( $recom_pct . '%' ); ?></span>
-					<span class="bam-stat-label"><?php esc_html_e( 'Recomendarían el servicio', 'beforeaftermycare' ); ?></span>
+					<span class="bam-stat-value"><?php echo esc_html( $stats['avg_admision'] > 0 ? $stats['avg_admision'] . ' / 5' : '—' ); ?></span>
+					<span class="bam-stat-label"><?php esc_html_e( 'Prom. Admisión', 'beforeaftermycare' ); ?></span>
 				</div>
 			</div>
 		</div>
 
-		<!-- Distribution charts (text-based) -->
+		<!-- Distribution charts – moment averages -->
 		<?php if ( $stats['total'] > 0 ) : ?>
 		<div class="bam-stat-grid" style="margin-bottom:28px;">
-
-			<?php if ( ! empty( $stats['atencion_dist'] ) ) : ?>
 			<div class="bam-card">
 				<div class="bam-card-header">
-					<h2 class="bam-card-title"><?php esc_html_e( 'Calidad de Atención', 'beforeaftermycare' ); ?></h2>
+					<h2 class="bam-card-title"><?php esc_html_e( 'Promedios por Momento', 'beforeaftermycare' ); ?></h2>
 				</div>
 				<div style="padding:16px 24px;">
-					<?php foreach ( $stats['atencion_dist'] as $row ) :
-						$pct = $stats['total'] > 0 ? round( ( $row->count / $stats['total'] ) * 100 ) : 0;
+					<?php
+					$moment_avgs = array(
+						__( 'Indicaciones para la preparación', 'beforeaftermycare' ) => $stats['avg_indicaciones'],
+						__( 'Admisión', 'beforeaftermycare' )                         => $stats['avg_admision'],
+						__( 'Sala de preparación y recuperación', 'beforeaftermycare' ) => $stats['avg_sala_preparacion'],
+						__( 'Salida del hospital', 'beforeaftermycare' )               => $stats['avg_salida_hospital'],
+						__( 'Satisfacción global', 'beforeaftermycare' )               => $stats['avg_rating'],
+					);
+					foreach ( $moment_avgs as $label => $avg ) :
+						$pct = $avg > 0 ? round( ( $avg / 5 ) * 100 ) : 0;
 					?>
 						<div style="margin-bottom:12px;">
 							<div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-								<span style="font-size:.85rem;font-weight:600;"><?php echo esc_html( $row->atencion ); ?></span>
-								<span style="font-size:.85rem;color:var(--bam-muted);"><?php echo esc_html( $row->count . ' (' . $pct . '%)' ); ?></span>
+								<span style="font-size:.85rem;font-weight:600;"><?php echo esc_html( $label ); ?></span>
+								<span style="font-size:.85rem;color:var(--bam-muted);"><?php echo $avg > 0 ? esc_html( $avg . ' / 5' ) : '—'; ?></span>
 							</div>
 							<div style="background:#e9ecef;border-radius:4px;height:8px;overflow:hidden;">
-								<div style="background:#0077b6;height:100%;width:<?php echo esc_attr( $pct ); ?>%;border-radius:4px;"></div>
+								<div style="background:linear-gradient(90deg,#0096c7,#48cae4);height:100%;width:<?php echo esc_attr( $pct ); ?>%;border-radius:4px;"></div>
 							</div>
 						</div>
 					<?php endforeach; ?>
 				</div>
 			</div>
-			<?php endif; ?>
-
-			<?php if ( ! empty( $stats['recomienda_dist'] ) ) : ?>
-			<div class="bam-card">
-				<div class="bam-card-header">
-					<h2 class="bam-card-title"><?php esc_html_e( '¿Recomendarían el servicio?', 'beforeaftermycare' ); ?></h2>
-				</div>
-				<div style="padding:16px 24px;">
-					<?php foreach ( $stats['recomienda_dist'] as $row ) :
-						$pct = $stats['total'] > 0 ? round( ( $row->count / $stats['total'] ) * 100 ) : 0;
-						$bar_color = 'Sí' === $row->recomendaria ? '#28a745' : ( 'No' === $row->recomendaria ? '#dc3545' : '#ffc107' );
-					?>
-						<div style="margin-bottom:12px;">
-							<div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-								<span style="font-size:.85rem;font-weight:600;"><?php echo esc_html( $row->recomendaria ); ?></span>
-								<span style="font-size:.85rem;color:var(--bam-muted);"><?php echo esc_html( $row->count . ' (' . $pct . '%)' ); ?></span>
-							</div>
-							<div style="background:#e9ecef;border-radius:4px;height:8px;overflow:hidden;">
-								<div style="background:<?php echo esc_attr( $bar_color ); ?>;height:100%;width:<?php echo esc_attr( $pct ); ?>%;border-radius:4px;"></div>
-							</div>
-						</div>
-					<?php endforeach; ?>
-				</div>
-			</div>
-			<?php endif; ?>
-
 		</div>
 		<?php endif; ?>
 
@@ -241,23 +212,30 @@ $msg = isset( $_GET['bam_survey_msg'] ) ? sanitize_key( $_GET['bam_survey_msg'] 
 								<th><?php esc_html_e( '#', 'beforeaftermycare' ); ?></th>
 								<th><?php esc_html_e( 'Paciente', 'beforeaftermycare' ); ?></th>
 								<th><?php esc_html_e( 'Correo', 'beforeaftermycare' ); ?></th>
-								<th><?php esc_html_e( 'Calificación', 'beforeaftermycare' ); ?></th>
-								<th><?php esc_html_e( 'Guía útil', 'beforeaftermycare' ); ?></th>
-								<th><?php esc_html_e( 'Atención', 'beforeaftermycare' ); ?></th>
-								<th><?php esc_html_e( 'Recomendaría', 'beforeaftermycare' ); ?></th>
-								<th><?php esc_html_e( 'Aspectos a mejorar', 'beforeaftermycare' ); ?></th>
+								<th title="<?php esc_attr_e( 'Indicaciones para la preparación', 'beforeaftermycare' ); ?>"><?php esc_html_e( 'Indicaciones', 'beforeaftermycare' ); ?></th>
+								<th><?php esc_html_e( 'Admisión', 'beforeaftermycare' ); ?></th>
+								<th title="<?php esc_attr_e( 'Sala de preparación y recuperación', 'beforeaftermycare' ); ?>"><?php esc_html_e( 'Sala Prep.', 'beforeaftermycare' ); ?></th>
+								<th title="<?php esc_attr_e( 'Salida del hospital', 'beforeaftermycare' ); ?>"><?php esc_html_e( 'Salida', 'beforeaftermycare' ); ?></th>
+								<th title="<?php esc_attr_e( 'Satisfacción global', 'beforeaftermycare' ); ?>"><?php esc_html_e( 'S. Global', 'beforeaftermycare' ); ?></th>
 								<th><?php esc_html_e( 'Comentarios', 'beforeaftermycare' ); ?></th>
 								<th><?php esc_html_e( 'Fecha', 'beforeaftermycare' ); ?></th>
 							</tr>
 						</thead>
 						<tbody>
-							<?php foreach ( $responses as $r ) :
-								$stars = str_repeat( '★', (int) $r->calificacion ) . str_repeat( '☆', 5 - (int) $r->calificacion );
-							?>
+							<?php
+							$scale_labels = array( 1 => 'Muy insatisfecho', 2 => 'Insatisfecho', 3 => 'Neutral', 4 => 'Satisfecho', 5 => 'Muy satisfecho' );
+							$rating_html  = function( $val ) use ( $scale_labels ) {
+								if ( ! $val ) return '<span style="color:#9ca3af;">—</span>';
+								$colors = array( 1 => '#ef4444', 2 => '#f97316', 3 => '#f59e0b', 4 => '#22c55e', 5 => '#16a34a' );
+								$color  = $colors[ (int) $val ] ?? '#374151';
+								$title  = $scale_labels[ (int) $val ] ?? '';
+								return '<span style="font-weight:700;color:' . esc_attr( $color ) . ';" title="' . esc_attr( $title ) . '">' . esc_html( $val ) . '/5</span>';
+							};
+							foreach ( $responses as $r ) : ?>
 								<tr>
 									<td><?php echo esc_html( $r->id ); ?></td>
 									<td>
-										<?php echo esc_html( $r->patient_name ); ?>
+										<?php echo esc_html( $r->patient_name ?: '—' ); ?>
 										<?php if ( $r->patient_id ) : ?>
 											<br><small style="color:var(--bam-muted);">
 												<?php
@@ -272,20 +250,12 @@ $msg = isset( $_GET['bam_survey_msg'] ) ? sanitize_key( $_GET['bam_survey_msg'] 
 											</small>
 										<?php endif; ?>
 									</td>
-									<td><?php echo esc_html( $r->patient_email ); ?></td>
-									<td style="white-space:nowrap;color:#f4a825;" title="<?php echo esc_attr( $r->calificacion . '/5' ); ?>">
-										<?php echo esc_html( $stars ); ?>
-									</td>
-									<td>
-										<?php if ( $r->guia_util ) : ?>
-											<span class="bam-badge bam-badge-success"><?php esc_html_e( 'Sí', 'beforeaftermycare' ); ?></span>
-										<?php else : ?>
-											<span class="bam-badge bam-badge-inactive"><?php esc_html_e( 'No', 'beforeaftermycare' ); ?></span>
-										<?php endif; ?>
-									</td>
-									<td><?php echo $r->atencion ? esc_html( $r->atencion ) : '—'; ?></td>
-									<td><?php echo $r->recomendaria ? esc_html( $r->recomendaria ) : '—'; ?></td>
-									<td style="max-width:160px;font-size:.8rem;"><?php echo $r->aspectos_mejora ? esc_html( $r->aspectos_mejora ) : '—'; ?></td>
+									<td><?php echo esc_html( $r->patient_email ?: '—' ); ?></td>
+									<td style="text-align:center;"><?php echo $rating_html( $r->momento_indicaciones ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td>
+									<td style="text-align:center;"><?php echo $rating_html( $r->momento_admision ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td>
+									<td style="text-align:center;"><?php echo $rating_html( $r->momento_sala_preparacion ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td>
+									<td style="text-align:center;"><?php echo $rating_html( $r->momento_salida_hospital ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td>
+									<td style="text-align:center;"><?php echo $rating_html( $r->satisfaccion_global ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td>
 									<td style="max-width:200px;font-size:.8rem;"><?php echo $r->comentarios ? esc_html( $r->comentarios ) : '—'; ?></td>
 									<td style="white-space:nowrap;"><?php echo esc_html( mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $r->fecha_envio ) ); ?></td>
 								</tr>

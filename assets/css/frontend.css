@@ -273,21 +273,34 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Trigger button */
+/* Trigger button wrapper – centered */
+.bam-survey-trigger-wrap {
+  text-align: center;
+  margin: 8px 0;
+}
+
+/* Trigger button – sky-blue to white gradient */
 .bam-survey-trigger {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 28px;
+  padding: 14px 32px;
   font-size: 1rem;
   border-radius: 50px;
-  box-shadow: 0 4px 16px rgba(0, 119, 182, 0.3);
-  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  background: linear-gradient(135deg, #0096c7 0%, #48cae4 55%, #caf0f8 100%);
+  color: #004e77;
+  border: none;
+  font-weight: 700;
+  box-shadow: 0 4px 18px rgba(0, 150, 199, 0.32);
+  transition: box-shadow 0.2s, transform 0.15s, filter 0.2s;
+  text-shadow: none;
+  letter-spacing: 0.02em;
 }
 
 .bam-survey-trigger:hover {
-  box-shadow: 0 6px 22px rgba(0, 119, 182, 0.4);
-  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow: 0 6px 26px rgba(0, 150, 199, 0.45);
+  transform: translateY(-2px);
 }
 
 /* ── Modal ─────────────────────────────────────────────────────── */
@@ -344,41 +357,35 @@
   align-items: flex-start;
   gap: 14px;
   padding: 24px 28px 20px;
-  background: linear-gradient(135deg, #0077b6 0%, #005f92 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #e0f7fa 0%, #f0fdff 100%);
+  border-bottom: 1px solid #b2ebf2;
 }
 
-.bam-survey-modal-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 14px;
-  flex-shrink: 0;
+.bam-survey-modal-header-text {
+  flex: 1;
 }
 
 .bam-survey-modal-title {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  margin: 0 0 4px;
-  color: #fff;
+  margin: 0 0 5px;
+  color: #00546a;
 }
 
 .bam-survey-modal-subtitle {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   margin: 0;
-  color: rgba(255, 255, 255, 0.85);
+  color: #4a7d8a;
+  line-height: 1.5;
 }
 
 .bam-survey-modal-close {
   margin-left: auto;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 84, 106, 0.08);
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: #00546a;
   cursor: pointer;
   padding: 6px;
   display: flex;
@@ -388,7 +395,7 @@
 }
 
 .bam-survey-modal-close:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 84, 106, 0.18);
 }
 
 /* Modal body */
@@ -421,13 +428,37 @@
   border-color: #9ca3af;
 }
 
+/* Teal outline button (Limpiar) */
+.bam-btn-outline-teal {
+  background: #fff;
+  color: #0096c7;
+  border: 1.5px solid #0096c7;
+}
+
+.bam-btn-outline-teal:hover {
+  background: #e0f7fa;
+  border-color: #0096c7;
+}
+
+/* Teal solid button (Enviar) */
+.bam-btn-teal {
+  background: #0096c7;
+  color: #fff;
+  border: 1.5px solid #0096c7;
+}
+
+.bam-btn-teal:hover {
+  background: #0077b6;
+  border-color: #0077b6;
+}
+
 /* Survey sections */
 .bam-survey-section {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .bam-survey-section:last-child {
@@ -443,6 +474,247 @@
   margin: 0 0 16px;
   padding-bottom: 10px;
   border-bottom: 1px solid #e2e8f0;
+}
+
+/* New section label (not uppercase) */
+.bam-survey-section-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #374151;
+  margin: 0 0 14px;
+}
+
+/* Scale legend */
+.bam-survey-scale-info {
+  background: #f0fdff;
+  border: 1px solid #b2ebf2;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.82rem;
+  color: #00546a;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+/* ── Rating table ───────────────────────────────────────────── */
+.bam-rating-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 10px;
+  border: 1px solid #b2ebf2;
+}
+
+.bam-rating-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.bam-rating-table thead tr {
+  background: #e0f7fa;
+}
+
+.bam-rating-table thead th {
+  padding: 11px 14px;
+  text-align: center;
+  font-weight: 700;
+  color: #00546a;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.bam-rating-table thead th.bam-rt-moment-col {
+  text-align: left;
+  min-width: 160px;
+}
+
+.bam-rating-table tbody tr {
+  border-top: 1px solid #d4f1f7;
+  transition: background 0.12s;
+}
+
+.bam-rating-table tbody tr:hover {
+  background: #f0fdff;
+}
+
+.bam-rating-table tbody td {
+  padding: 12px 14px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.bam-rating-table tbody td.bam-rt-moment-col {
+  text-align: left;
+}
+
+.bam-rating-table tbody td.bam-rt-moment-col span {
+  font-weight: 600;
+  color: #0077b6;
+  line-height: 1.4;
+}
+
+/* Radio button in table */
+.bam-rt-radio-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.bam-rt-radio {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.bam-rt-radio-dot {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #00b4d8;
+  background: #fff;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+
+.bam-rt-radio:checked + .bam-rt-radio-dot {
+  background: #00b4d8;
+  border-color: #0096c7;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.2);
+}
+
+.bam-rt-radio:focus + .bam-rt-radio-dot {
+  box-shadow: 0 0 0 3px rgba(0, 150, 199, 0.3);
+}
+
+.bam-rt-radio-label:hover .bam-rt-radio-dot {
+  border-color: #0096c7;
+  background: #e0f7fa;
+}
+
+/* Character counter */
+.bam-survey-char-counter {
+  font-size: 0.8rem;
+  color: #0096c7;
+  margin-top: 5px;
+  text-align: left;
+  font-weight: 500;
+}
+
+.bam-survey-comments {
+  resize: vertical;
+  min-height: 90px;
+}
+
+/* ── Reminder Widget [bam_recordatorio] ─────────────────────── */
+.bam-reminder-widget {
+  max-width: 480px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 119, 182, 0.14);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.bam-reminder-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px 16px;
+  background: linear-gradient(135deg, #0096c7 0%, #48cae4 100%);
+  color: #fff;
+}
+
+.bam-reminder-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 12px;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.bam-reminder-header-text h3 {
+  margin: 0 0 2px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.bam-reminder-header-text p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.85);
+}
+
+.bam-reminder-body {
+  background: #fff;
+  padding: 20px 24px;
+}
+
+.bam-reminder-row {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0;
+  border-bottom: 1px solid #e0f2fe;
+}
+
+.bam-reminder-row:last-child {
+  border-bottom: none;
+}
+
+.bam-reminder-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #64748b;
+  margin-bottom: 3px;
+}
+
+.bam-reminder-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.bam-reminder-value.bam-reminder-date {
+  color: #0096c7;
+  font-size: 1rem;
+}
+
+.bam-reminder-footer {
+  background: #f0f9ff;
+  border-top: 1px solid #bae6fd;
+  padding: 14px 24px;
+  font-size: 0.82rem;
+  color: #0369a1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bam-reminder-footer svg {
+  flex-shrink: 0;
+  color: #0096c7;
+}
+
+.bam-reminder-widget-login {
+  max-width: 480px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  padding: 20px 24px;
+  font-size: 0.9rem;
+  color: #0369a1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 .bam-survey-form {

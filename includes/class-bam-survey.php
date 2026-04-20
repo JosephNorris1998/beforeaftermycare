@@ -108,34 +108,20 @@ class BAM_Survey {
 		}
 
 		// Collect & sanitize.
-		$patient_name    = sanitize_text_field( wp_unslash( $_POST['bam_patient_name']    ?? '' ) );
-		$patient_email   = sanitize_email( wp_unslash( $_POST['bam_patient_email']        ?? '' ) );
-		$calificacion    = absint( $_POST['bam_calificacion']                              ?? 0 );
-		$guia_util       = isset( $_POST['bam_guia_util'] ) ? 1 : 0;
-		$atencion        = sanitize_text_field( wp_unslash( $_POST['bam_atencion']        ?? '' ) );
-		$recomendaria    = sanitize_text_field( wp_unslash( $_POST['bam_recomendaria']    ?? '' ) );
-		$comentarios     = sanitize_textarea_field( wp_unslash( $_POST['bam_comentarios'] ?? '' ) );
+		$patient_name            = sanitize_text_field( wp_unslash( $_POST['bam_patient_name']    ?? '' ) );
+		$patient_email           = sanitize_email( wp_unslash( $_POST['bam_patient_email']        ?? '' ) );
+		$momento_indicaciones    = absint( $_POST['bam_momento_indicaciones']                      ?? 0 ) ?: null;
+		$momento_admision        = absint( $_POST['bam_momento_admision']                          ?? 0 ) ?: null;
+		$momento_sala_preparacion = absint( $_POST['bam_momento_sala_preparacion']                 ?? 0 ) ?: null;
+		$momento_salida_hospital = absint( $_POST['bam_momento_salida_hospital']                   ?? 0 ) ?: null;
+		$satisfaccion_global     = absint( $_POST['bam_satisfaccion_global']                       ?? 0 ) ?: null;
+		$comentarios             = sanitize_textarea_field( wp_unslash( $_POST['bam_comentarios'] ?? '' ) );
 
-		// Aspectos de mejora – array of checkboxes.
-		$aspectos_raw = isset( $_POST['bam_aspectos'] ) && is_array( $_POST['bam_aspectos'] )
-			? array_map( 'sanitize_text_field', wp_unslash( $_POST['bam_aspectos'] ) )
-			: array();
-		$aspectos_mejora = implode( ', ', $aspectos_raw );
+		// Derive calificacion from global satisfaction for stats compatibility.
+		$calificacion = $satisfaccion_global ?? 0;
 
-		// Validate required fields.
+		// No required-field errors for the new form; everything is optional.
 		$errors = array();
-
-		if ( empty( $patient_name ) ) {
-			$errors['patient_name'] = __( 'El nombre es requerido.', 'beforeaftermycare' );
-		}
-
-		if ( empty( $patient_email ) || ! is_email( $patient_email ) ) {
-			$errors['patient_email'] = __( 'Ingresa un correo electrónico válido.', 'beforeaftermycare' );
-		}
-
-		if ( $calificacion < 1 || $calificacion > 5 ) {
-			$errors['calificacion'] = __( 'Por favor selecciona una calificación del 1 al 5.', 'beforeaftermycare' );
-		}
 
 		if ( ! empty( $errors ) ) {
 			$this->store_errors( $errors );
@@ -153,28 +139,29 @@ class BAM_Survey {
 
 		// Save to DB.
 		$insert_id = BAM_Database::insert_survey_response( array(
-			'patient_id'      => $patient_id,
-			'patient_name'    => $patient_name,
-			'patient_email'   => $patient_email,
-			'calificacion'    => $calificacion,
-			'guia_util'       => $guia_util,
-			'atencion'        => $atencion ?: null,
-			'recomendaria'    => $recomendaria ?: null,
-			'aspectos_mejora' => $aspectos_mejora ?: null,
-			'comentarios'     => $comentarios ?: null,
+			'patient_id'               => $patient_id,
+			'patient_name'             => $patient_name,
+			'patient_email'            => $patient_email,
+			'calificacion'             => $calificacion,
+			'momento_indicaciones'     => $momento_indicaciones,
+			'momento_admision'         => $momento_admision,
+			'momento_sala_preparacion' => $momento_sala_preparacion,
+			'momento_salida_hospital'  => $momento_salida_hospital,
+			'satisfaccion_global'      => $satisfaccion_global,
+			'comentarios'              => $comentarios ?: null,
 		) );
 
 		// Send email notification.
 		if ( $insert_id ) {
 			$this->send_notification( $insert_id, array(
-				'patient_name'    => $patient_name,
-				'patient_email'   => $patient_email,
-				'calificacion'    => $calificacion,
-				'guia_util'       => $guia_util,
-				'atencion'        => $atencion,
-				'recomendaria'    => $recomendaria,
-				'aspectos_mejora' => $aspectos_mejora,
-				'comentarios'     => $comentarios,
+				'patient_name'             => $patient_name,
+				'patient_email'            => $patient_email,
+				'momento_indicaciones'     => $momento_indicaciones,
+				'momento_admision'         => $momento_admision,
+				'momento_sala_preparacion' => $momento_sala_preparacion,
+				'momento_salida_hospital'  => $momento_salida_hospital,
+				'satisfaccion_global'      => $satisfaccion_global,
+				'comentarios'              => $comentarios,
 			) );
 		}
 
@@ -203,28 +190,27 @@ class BAM_Survey {
 			$response_id
 		);
 
-		$rating_stars = str_repeat( '★', (int) $data['calificacion'] ) . str_repeat( '☆', 5 - (int) $data['calificacion'] );
+		$scale = array( 1 => 'Muy insatisfecho', 2 => 'Insatisfecho', 3 => 'Neutral', 4 => 'Satisfecho', 5 => 'Muy satisfecho' );
+		$fmt   = function( $v ) use ( $scale ) {
+			return $v ? $v . '/5 – ' . ( $scale[ $v ] ?? '' ) : '—';
+		};
 
-		$body  = sprintf( __( 'Se ha recibido una nueva respuesta de encuesta de satisfacción.', 'beforeaftermycare' ) ) . "\n\n";
-		$body .= sprintf( __( 'Paciente: %s', 'beforeaftermycare' ), $data['patient_name'] ) . "\n";
-		$body .= sprintf( __( 'Correo: %s', 'beforeaftermycare' ), $data['patient_email'] ) . "\n";
-		$body .= sprintf( __( 'Calificación: %s (%d/5)', 'beforeaftermycare' ), $rating_stars, $data['calificacion'] ) . "\n";
-		$body .= sprintf( __( 'Guía fue útil: %s', 'beforeaftermycare' ), $data['guia_util'] ? __( 'Sí', 'beforeaftermycare' ) : __( 'No', 'beforeaftermycare' ) ) . "\n";
-
-		if ( ! empty( $data['atencion'] ) ) {
-			$body .= sprintf( __( 'Atención recibida: %s', 'beforeaftermycare' ), $data['atencion'] ) . "\n";
+		$body  = __( 'Se ha recibido una nueva respuesta de encuesta de satisfacción.', 'beforeaftermycare' ) . "\n\n";
+		if ( ! empty( $data['patient_name'] ) ) {
+			$body .= sprintf( __( 'Paciente: %s', 'beforeaftermycare' ), $data['patient_name'] ) . "\n";
 		}
-
-		if ( ! empty( $data['recomendaria'] ) ) {
-			$body .= sprintf( __( 'Recomendaría el servicio: %s', 'beforeaftermycare' ), $data['recomendaria'] ) . "\n";
+		if ( ! empty( $data['patient_email'] ) ) {
+			$body .= sprintf( __( 'Correo: %s', 'beforeaftermycare' ), $data['patient_email'] ) . "\n";
 		}
-
-		if ( ! empty( $data['aspectos_mejora'] ) ) {
-			$body .= sprintf( __( 'Aspectos a mejorar: %s', 'beforeaftermycare' ), $data['aspectos_mejora'] ) . "\n";
-		}
+		$body .= "\n" . __( 'Calificación por momento:', 'beforeaftermycare' ) . "\n";
+		$body .= '  • Indicaciones para la preparación: ' . $fmt( $data['momento_indicaciones'] ) . "\n";
+		$body .= '  • Admisión: '                         . $fmt( $data['momento_admision'] ) . "\n";
+		$body .= '  • Sala de preparación y recuperación: ' . $fmt( $data['momento_sala_preparacion'] ) . "\n";
+		$body .= '  • Salida del hospital: '               . $fmt( $data['momento_salida_hospital'] ) . "\n";
+		$body .= '  • Satisfacción global: '               . $fmt( $data['satisfaccion_global'] ) . "\n";
 
 		if ( ! empty( $data['comentarios'] ) ) {
-			$body .= "\n" . __( 'Comentarios:', 'beforeaftermycare' ) . "\n" . $data['comentarios'] . "\n";
+			$body .= "\n" . __( 'Recomendaciones o comentarios:', 'beforeaftermycare' ) . "\n" . $data['comentarios'] . "\n";
 		}
 
 		$body .= "\n" . sprintf(

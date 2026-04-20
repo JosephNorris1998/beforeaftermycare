@@ -49,7 +49,7 @@
     var openBtn    = document.getElementById('bam-survey-open');
     var modal      = document.getElementById('bam-survey-modal');
     var closeBtn   = document.getElementById('bam-survey-close');
-    var cancelBtn  = document.getElementById('bam-survey-cancel');
+    var clearBtn   = document.getElementById('bam-survey-clear');
     var backdrop   = document.getElementById('bam-survey-backdrop');
 
     if (!openBtn || !modal) return;
@@ -70,8 +70,22 @@
     openBtn.addEventListener('click', openModal);
 
     if (closeBtn)  closeBtn.addEventListener('click', closeModal);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
     if (backdrop)  backdrop.addEventListener('click', closeModal);
+
+    // Limpiar – reset all form fields
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        var form = document.getElementById('bam-survey-form');
+        if (!form) return;
+        // Reset radio buttons
+        form.querySelectorAll('input[type="radio"]').forEach(function (r) { r.checked = false; });
+        // Reset textarea
+        form.querySelectorAll('textarea').forEach(function (t) { t.value = ''; });
+        // Reset char counter
+        var counter = document.getElementById('bam-char-count');
+        if (counter) counter.textContent = '0';
+      });
+    }
 
     // Close on Escape key
     document.addEventListener('keydown', function (e) {
@@ -84,6 +98,18 @@
     var errorElement = modal && modal.querySelector('.bam-notice-error, .bam-field-error');
     if (errorElement) {
       openModal();
+    }
+
+    // ── Character counter for survey comments ────────────────
+    var commentsArea = document.getElementById('bam_comentarios');
+    var charCount    = document.getElementById('bam-char-count');
+
+    if (commentsArea && charCount) {
+      function updateCounter() {
+        charCount.textContent = commentsArea.value.length;
+      }
+      commentsArea.addEventListener('input', updateCounter);
+      updateCounter(); // initialise on load (for pre-filled values)
     }
   });
 })();
