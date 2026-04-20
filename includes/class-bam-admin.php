@@ -254,6 +254,17 @@ class BAM_Admin {
 	}
 
 	/**
+	 * Detect whether LiteSpeed Cache is available.
+	 *
+	 * @return bool
+	 */
+	public static function litespeed_available() {
+		return class_exists( 'LiteSpeed_Cache_API' )
+			|| function_exists( 'litespeed_purge_all' )
+			|| has_action( 'litespeed_purge_all' );
+	}
+
+	/**
 	 * Handle the cache-clear POST action (hooked to admin_post_bam_clear_cache).
 	 */
 	public function handle_clear_cache() {
@@ -265,8 +276,8 @@ class BAM_Admin {
 			wp_die( esc_html__( 'Acción no autorizada.', 'beforeaftermycare' ) );
 		}
 
-		// 1. Delete all BAM transients.
-		global $wpdb;
+		// 1. Delete all BAM transients (static pattern – no user input).
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_bam_%' OR option_name LIKE '_transient_timeout_bam_%'" );
 
 		// 2. Flush WordPress rewrite rules / object cache.
@@ -274,12 +285,14 @@ class BAM_Admin {
 		flush_rewrite_rules( false );
 
 		// 3. LiteSpeed Cache integration – purge all if available.
-		if ( class_exists( 'LiteSpeed_Cache_API' ) ) {
-			LiteSpeed_Cache_API::purge_all();
-		} elseif ( function_exists( 'litespeed_purge_all' ) ) {
-			litespeed_purge_all();
-		} elseif ( has_action( 'litespeed_purge_all' ) ) {
-			do_action( 'litespeed_purge_all' );
+		if ( self::litespeed_available() ) {
+			if ( class_exists( 'LiteSpeed_Cache_API' ) ) {
+				LiteSpeed_Cache_API::purge_all();
+			} elseif ( function_exists( 'litespeed_purge_all' ) ) {
+				litespeed_purge_all();
+			} else {
+				do_action( 'litespeed_purge_all' );
+			}
 		}
 
 		// 4. W3 Total Cache / WP Super Cache integration.

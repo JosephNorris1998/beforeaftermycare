@@ -110,8 +110,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 
 		<?php
-		// Show LiteSpeed status.
-		$ls_active = class_exists( 'LiteSpeed_Cache_API' ) || function_exists( 'litespeed_purge_all' ) || has_action( 'litespeed_purge_all' );
+		// Show LiteSpeed status using the shared detection helper.
+		$ls_active = BAM_Admin::litespeed_available();
 		?>
 		<div class="bam-card">
 			<div class="bam-card-header">

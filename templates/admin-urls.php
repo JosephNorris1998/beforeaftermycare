@@ -96,7 +96,19 @@ $urls = array(
 					<div class="bam-url-card-header">
 						<div class="bam-stat-icon <?php echo esc_attr( $item['icon_color'] ); ?>" style="width:40px;height:40px;border-radius:10px;">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-								<?php echo $item['icon']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+								<?php
+								echo wp_kses(
+									$item['icon'],
+									array(
+										'path'     => array( 'd' => array() ),
+										'polyline' => array( 'points' => array() ),
+										'polygon'  => array( 'points' => array() ),
+										'circle'   => array( 'cx' => array(), 'cy' => array(), 'r' => array() ),
+										'rect'     => array( 'x' => array(), 'y' => array(), 'width' => array(), 'height' => array(), 'rx' => array(), 'ry' => array() ),
+										'line'     => array( 'x1' => array(), 'y1' => array(), 'x2' => array(), 'y2' => array() ),
+									)
+								);
+								?>
 							</svg>
 						</div>
 						<div class="bam-url-card-title-wrap">
