@@ -435,8 +435,8 @@ class BAM_Database {
 				 WHERE estado = 1
 				   AND recordatorio_enviado = 0
 				   AND fecha_procedimiento IS NOT NULL
-				   AND fecha_procedimiento > NOW()
-				   AND fecha_procedimiento <= DATE_ADD(NOW(), INTERVAL %d HOUR)",
+				   AND fecha_procedimiento > UTC_TIMESTAMP()
+				   AND fecha_procedimiento <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL %d HOUR)",
 				(int) $hours_before
 			)
 		) ?: array();

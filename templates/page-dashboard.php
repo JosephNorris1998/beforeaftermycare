@@ -586,7 +586,7 @@ echo esc_html( $current_label );
 </div>
 <div class="bam-field">
 <label class="bam-label" for="bam_fecha_procedimiento"><?php esc_html_e( 'Fecha y Hora del Procedimiento', 'beforeaftermycare' ); ?></label>
-<input class="bam-input" type="datetime-local" id="bam_fecha_procedimiento" name="bam_fecha_procedimiento" value="<?php echo esc_attr( ! empty( $edit_patient->fecha_procedimiento ) ? date( 'Y-m-d\TH:i', strtotime( $edit_patient->fecha_procedimiento ) ) : '' ); ?>">
+<input class="bam-input" type="datetime-local" id="bam_fecha_procedimiento" name="bam_fecha_procedimiento" value="<?php echo esc_attr( ! empty( $edit_patient->fecha_procedimiento ) ? gmdate( 'Y-m-d\TH:i', strtotime( $edit_patient->fecha_procedimiento ) ) : '' ); ?>">
 <span style="font-size:0.8rem;color:#64748b;margin-top:4px;display:block;"><?php esc_html_e( 'El recordatorio se enviará automáticamente según la configuración de horas.', 'beforeaftermycare' ); ?></span>
 </div>
 <div class="bam-form-actions">

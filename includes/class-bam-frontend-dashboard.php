@@ -250,7 +250,7 @@ class BAM_Frontend_Dashboard {
 		// Procedure date and name.
 		$new_fecha = sanitize_text_field( wp_unslash( $_POST['bam_fecha_procedimiento'] ?? '' ) );
 		if ( $new_fecha ) {
-			$data['fecha_procedimiento'] = date( 'Y-m-d H:i:s', strtotime( $new_fecha ) );
+			$data['fecha_procedimiento'] = gmdate( 'Y-m-d H:i:s', strtotime( $new_fecha ) );
 		} else {
 			$data['fecha_procedimiento'] = null;
 		}
