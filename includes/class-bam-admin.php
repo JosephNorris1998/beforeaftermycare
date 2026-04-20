@@ -33,6 +33,7 @@ class BAM_Admin {
 		add_action( 'admin_menu',            array( $this, 'register_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_init',            array( $this, 'handle_actions' ) );
+		add_action( 'admin_post_bam_clear_cache', array( $this, 'handle_clear_cache' ) );
 	}
 
 	// ── Menu ──────────────────────────────────────────────────────────────────
@@ -78,6 +79,26 @@ class BAM_Admin {
 			'manage_options',
 			'bam-patient-detail',
 			array( $this, 'page_patient_detail' )
+		);
+		$this->page_hooks[] = $hook;
+
+		$hook = add_submenu_page(
+			self::MENU_SLUG,
+			__( 'URLs del Plugin', 'beforeaftermycare' ),
+			__( 'URLs del Plugin', 'beforeaftermycare' ),
+			'manage_options',
+			'bam-urls',
+			array( $this, 'page_urls' )
+		);
+		$this->page_hooks[] = $hook;
+
+		$hook = add_submenu_page(
+			self::MENU_SLUG,
+			__( 'Limpiar Caché', 'beforeaftermycare' ),
+			__( 'Limpiar Caché', 'beforeaftermycare' ),
+			'manage_options',
+			'bam-cache',
+			array( $this, 'page_cache' )
 		);
 		$this->page_hooks[] = $hook;
 	}
@@ -219,5 +240,63 @@ class BAM_Admin {
 		}
 
 		include BAM_PLUGIN_DIR . 'templates/admin-patient-detail.php';
+	}
+
+	/** URLs del Plugin page. */
+	public function page_urls() {
+		include BAM_PLUGIN_DIR . 'templates/admin-urls.php';
+	}
+
+	/** Limpiar Caché page. */
+	public function page_cache() {
+		$msg = isset( $_GET['bam_cache_msg'] ) ? sanitize_key( $_GET['bam_cache_msg'] ) : '';
+		include BAM_PLUGIN_DIR . 'templates/admin-cache.php';
+	}
+
+	/**
+	 * Handle the cache-clear POST action (hooked to admin_post_bam_clear_cache).
+	 */
+	public function handle_clear_cache() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'No tienes permiso para realizar esta acción.', 'beforeaftermycare' ) );
+		}
+
+		if ( ! isset( $_POST['bam_cache_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bam_cache_nonce'] ) ), 'bam_clear_cache' ) ) {
+			wp_die( esc_html__( 'Acción no autorizada.', 'beforeaftermycare' ) );
+		}
+
+		// 1. Delete all BAM transients.
+		global $wpdb;
+		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_bam_%' OR option_name LIKE '_transient_timeout_bam_%'" );
+
+		// 2. Flush WordPress rewrite rules / object cache.
+		wp_cache_flush();
+		flush_rewrite_rules( false );
+
+		// 3. LiteSpeed Cache integration – purge all if available.
+		if ( class_exists( 'LiteSpeed_Cache_API' ) ) {
+			LiteSpeed_Cache_API::purge_all();
+		} elseif ( function_exists( 'litespeed_purge_all' ) ) {
+			litespeed_purge_all();
+		} elseif ( has_action( 'litespeed_purge_all' ) ) {
+			do_action( 'litespeed_purge_all' );
+		}
+
+		// 4. W3 Total Cache / WP Super Cache integration.
+		if ( function_exists( 'w3tc_flush_all' ) ) {
+			w3tc_flush_all();
+		}
+		if ( function_exists( 'wp_cache_clear_cache' ) ) {
+			wp_cache_clear_cache();
+		}
+
+		// 5. Send cache-control headers hint (no-store for admin).
+		if ( ! headers_sent() ) {
+			header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+			header( 'Pragma: no-cache' );
+		}
+
+		wp_redirect( add_query_arg( array( 'page' => 'bam-cache', 'bam_cache_msg' => 'cleared' ), admin_url( 'admin.php' ) ) );
+		exit;
 	}
 }

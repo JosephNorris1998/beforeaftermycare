@@ -30,6 +30,9 @@ class BAM_Registration {
 	/** Slug of the auto-created registration page. */
 	const PAGE_SLUG = 'registro';
 
+	/** Slug of the colonoscopy guide page. */
+	const GUIDE_SLUG = 'guia-de-colonoscopia';
+
 	private function __construct() {
 		add_shortcode( 'bam_registro', array( $this, 'render_form' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
@@ -67,6 +70,10 @@ class BAM_Registration {
 	 */
 	public function intercept_template( $template ) {
 		if ( ! is_page( self::PAGE_SLUG ) ) {
+			// Check for colonoscopy guide page.
+			if ( is_page( self::GUIDE_SLUG ) ) {
+				return $this->intercept_guide_template( $template );
+			}
 			return $template;
 		}
 
@@ -77,6 +84,41 @@ class BAM_Registration {
 		}
 
 		return BAM_PLUGIN_DIR . 'templates/page-registro.php';
+	}
+
+	/**
+	 * Serve the guide page only to logged-in patients.
+	 *
+	 * @param string $template
+	 * @return string
+	 */
+	private function intercept_guide_template( $template ) {
+		// Not logged in → redirect to login page.
+		if ( ! is_user_logged_in() ) {
+			$login_url = home_url( '/' . BAM_Frontend_Dashboard::PAGE_LOGIN_SLUG . '/' );
+			wp_redirect( add_query_arg( 'bam_redirect', 'guide', $login_url ) );
+			exit;
+		}
+
+		// Logged in, but check if this user is a registered patient.
+		$patient = BAM_Database::get_patient_by_wp_user_id( get_current_user_id() );
+
+		if ( ! $patient ) {
+			// Admins (manage_options) may view the guide freely.
+			if ( current_user_can( 'manage_options' ) ) {
+				return $template;
+			}
+			// Not a patient → access denied.
+			return BAM_PLUGIN_DIR . 'templates/page-guia-acceso-denegado.php';
+		}
+
+		// Patient is inactive → deny access.
+		if ( ! $patient->estado ) {
+			return BAM_PLUGIN_DIR . 'templates/page-guia-acceso-denegado.php';
+		}
+
+		// Valid patient – let the normal theme template render.
+		return $template;
 	}
 
 	// ── Public error accessor (used by templates) ─────────────────────────────
