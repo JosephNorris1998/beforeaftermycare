@@ -11,7 +11,7 @@ class BAM_Database {
 
 	/** @var string DB version key used for upgrade checks. */
 	const DB_VERSION_KEY = 'bam_db_version';
-	const DB_VERSION     = '1.3';
+	const DB_VERSION     = '1.4';
 
 	/** @var string Patients table name (without prefix). */
 	const TABLE_PATIENTS = 'bam_patients';
@@ -45,6 +45,7 @@ class BAM_Database {
 			fecha_procedimiento DATETIME               DEFAULT NULL,
 			procedimiento VARCHAR(200)                 DEFAULT NULL,
 			recordatorio_enviado TINYINT(1)   NOT NULL DEFAULT 0,
+			recordatorio_horas   SMALLINT UNSIGNED NOT NULL DEFAULT 24,
 			PRIMARY KEY  (id),
 			UNIQUE KEY uq_usuario (usuario),
 			UNIQUE KEY uq_correo  (correo),
@@ -438,26 +439,22 @@ class BAM_Database {
 	// ── Reminders ─────────────────────────────────────────────────────────────
 
 	/**
-	 * Get patients whose procedure is coming up within $hours_before hours
+	 * Get patients whose procedure is coming up within their individual recordatorio_horas
 	 * and whose reminder has not yet been sent.
 	 *
-	 * @param int $hours_before Hours before procedure to trigger reminder.
 	 * @return array Array of patient objects.
 	 */
-	public static function get_patients_for_reminder( $hours_before = 24 ) {
+	public static function get_patients_for_reminder() {
 		global $wpdb;
 		$table = $wpdb->prefix . self::TABLE_PATIENTS;
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		return $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM {$table}
-				 WHERE estado = 1
-				   AND recordatorio_enviado = 0
-				   AND fecha_procedimiento IS NOT NULL
-				   AND fecha_procedimiento > UTC_TIMESTAMP()
-				   AND fecha_procedimiento <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL %d HOUR)",
-				(int) $hours_before
-			)
+			"SELECT * FROM {$table}
+			 WHERE estado = 1
+			   AND recordatorio_enviado = 0
+			   AND fecha_procedimiento IS NOT NULL
+			   AND fecha_procedimiento > UTC_TIMESTAMP()
+			   AND fecha_procedimiento <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL recordatorio_horas HOUR)"
 		) ?: array();
 		// phpcs:enable
 	}

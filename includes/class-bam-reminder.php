@@ -5,7 +5,7 @@
  * Uses WP-Cron to periodically check for upcoming patient procedures and
  * sends an elegant HTML reminder email from "Pacifica Salud".
  *
- * Option: bam_reminder_hours  (int)  – hours before procedure to send email (default 24).
+ * Each patient has their own recordatorio_horas column for per-patient timing.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -23,6 +23,9 @@ class BAM_Reminder {
 	/** Default reminder lead time in hours. */
 	const DEFAULT_HOURS = 24;
 
+	/** Nonce action for the frontend reminder form. */
+	const REMINDER_NONCE_ACTION = 'bam_recordatorio_save';
+
 	// ── Singleton ─────────────────────────────────────────────────────────────
 
 	public static function get_instance() {
@@ -38,6 +41,7 @@ class BAM_Reminder {
 		add_filter( 'wp_mail_from_name', array( $this, 'mail_from_name' ) );
 		add_shortcode( 'bam_recordatorio', array( $this, 'render_widget' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action( 'init', array( $this, 'handle_reminder_form' ) );
 	}
 
 	// ── Cron schedule ─────────────────────────────────────────────────────────
@@ -97,41 +101,142 @@ class BAM_Reminder {
 		);
 	}
 
+	// ── Frontend form handler ─────────────────────────────────────────────────
+
+	/**
+	 * Process POST submission of the [bam_recordatorio] appointment form.
+	 * Hooked to 'init' so headers can still be sent.
+	 */
+	public function handle_reminder_form() {
+		if ( ! isset( $_POST['bam_recordatorio_submit'] ) ) {
+			return;
+		}
+
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+
+		// Verify nonce.
+		if ( ! isset( $_POST['bam_recordatorio_nonce'] ) ||
+		     ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bam_recordatorio_nonce'] ) ), self::REMINDER_NONCE_ACTION ) ) {
+			wp_die( esc_html__( 'Token de seguridad inválido. Por favor recarga la página.', 'beforeaftermycare' ) );
+		}
+
+		$uid     = get_current_user_id();
+		$patient = BAM_Database::get_patient_by_wp_user_id( $uid );
+
+		if ( ! $patient ) {
+			return;
+		}
+
+		// Sanitize inputs.
+		$procedimiento      = sanitize_text_field( wp_unslash( $_POST['bam_procedimiento'] ?? '' ) );
+		$fecha_str          = sanitize_text_field( wp_unslash( $_POST['bam_fecha_procedimiento'] ?? '' ) );
+		$recordatorio_horas = (int) ( $_POST['bam_recordatorio_horas'] ?? self::DEFAULT_HOURS );
+
+		// Validate.
+		$errors = array();
+		$ts     = 0;
+
+		if ( empty( $fecha_str ) ) {
+			$errors[] = __( 'La fecha del procedimiento es requerida.', 'beforeaftermycare' );
+		} else {
+			$ts = strtotime( $fecha_str );
+			if ( ! $ts || $ts <= current_time( 'timestamp', true ) ) {
+				$errors[] = __( 'La fecha del procedimiento debe ser una fecha futura.', 'beforeaftermycare' );
+				$ts       = 0;
+			}
+		}
+
+		$allowed_hours = array( 12, 24, 48, 72 );
+		if ( ! in_array( $recordatorio_horas, $allowed_hours, true ) ) {
+			$recordatorio_horas = self::DEFAULT_HOURS;
+		}
+
+		if ( ! empty( $errors ) ) {
+			set_transient( 'bam_reminder_errors_' . $uid, $errors, 120 );
+			$referer = wp_get_referer();
+			wp_safe_redirect( $referer ?: home_url() );
+			exit;
+		}
+
+		$fecha_mysql   = gmdate( 'Y-m-d H:i:s', $ts );
+		$procedimiento = $procedimiento ?: ( ! empty( $patient->procedimiento ) ? $patient->procedimiento : __( 'Colonoscopia', 'beforeaftermycare' ) );
+
+		BAM_Database::update_patient( (int) $patient->id, array(
+			'procedimiento'        => $procedimiento,
+			'fecha_procedimiento'  => $fecha_mysql,
+			'recordatorio_horas'   => $recordatorio_horas,
+			'recordatorio_enviado' => 0,
+		) );
+
+		// Reload patient with updated data.
+		$patient = BAM_Database::get_patient( (int) $patient->id );
+
+		// Send immediate confirmation email.
+		if ( $patient ) {
+			$this->send_confirmation_email( $patient );
+		}
+
+		$referer  = wp_get_referer();
+		$redirect = add_query_arg( 'bam_reminder_saved', '1', $referer ?: home_url() );
+		wp_safe_redirect( $redirect );
+		exit;
+	}
+
 	// ── Shortcode: [bam_recordatorio] ─────────────────────────────────────────
 
 	/**
-	 * Render the appointment reminder widget for the logged-in patient.
+	 * Render the appointment reminder form + status widget for the logged-in patient.
 	 *
 	 * @return string HTML output.
 	 */
 	public function render_widget( $atts ) {
-		// Guest users – show nothing.
+		// Guest users.
 		if ( ! is_user_logged_in() ) {
 			return '<div class="bam-reminder-widget-login">'
 				. '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
-				. esc_html__( 'Inicia sesión para ver tu próxima cita.', 'beforeaftermycare' )
+				. esc_html__( 'Inicia sesión para programar tu recordatorio de cita.', 'beforeaftermycare' )
 				. '</div>';
 		}
 
 		$patient = BAM_Database::get_patient_by_wp_user_id( get_current_user_id() );
 
 		if ( ! $patient ) {
-			return '';
+			return '<div class="bam-reminder-widget-login">'
+				. '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+				. esc_html__( 'No se encontró tu registro de paciente. Por favor regístrate primero.', 'beforeaftermycare' )
+				. '</div>';
 		}
 
-		$reminder_hours = (int) get_option( 'bam_reminder_hours', self::DEFAULT_HOURS );
+		// Retrieve transient errors and success flag.
+		$uid    = get_current_user_id();
+		$errors = (array) get_transient( 'bam_reminder_errors_' . $uid );
+		if ( $errors ) {
+			delete_transient( 'bam_reminder_errors_' . $uid );
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$saved = isset( $_GET['bam_reminder_saved'] ) && '1' === $_GET['bam_reminder_saved'];
 
-		// Format procedure date.
+		// Per-patient reminder hours (falls back to DEFAULT_HOURS for old records).
+		$recordatorio_horas = isset( $patient->recordatorio_horas ) ? (int) $patient->recordatorio_horas : self::DEFAULT_HOURS;
+		if ( ! in_array( $recordatorio_horas, array( 12, 24, 48, 72 ), true ) ) {
+			$recordatorio_horas = self::DEFAULT_HOURS;
+		}
+
+		// Current appointment data for prefilling the form.
+		$fecha_input = '';
+		$fecha_fmt   = __( 'Fecha por confirmar', 'beforeaftermycare' );
+		$is_future   = false;
+
 		if ( ! empty( $patient->fecha_procedimiento ) ) {
-			$ts        = strtotime( $patient->fecha_procedimiento );
-			$fecha_fmt = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $ts );
-			$is_future = $ts > time();
-		} else {
-			$fecha_fmt = __( 'Fecha por confirmar', 'beforeaftermycare' );
-			$is_future = false;
+			$ts          = strtotime( $patient->fecha_procedimiento );
+			$fecha_input = gmdate( 'Y-m-d\TH:i', $ts );
+			$fecha_fmt   = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $ts );
+			$is_future   = $ts > time();
 		}
 
-		$procedimiento = ! empty( $patient->procedimiento ) ? $patient->procedimiento : __( 'Colonoscopia', 'beforeaftermycare' );
+		$procedimiento = ! empty( $patient->procedimiento ) ? $patient->procedimiento : '';
 
 		// Reminder status badge.
 		if ( $patient->recordatorio_enviado ) {
@@ -140,22 +245,56 @@ class BAM_Reminder {
 			$status_badge = '<span style="color:#0096c7;font-weight:700;">&#9201; ' . sprintf(
 				/* translators: %d: hours */
 				esc_html__( 'Se enviará %d h antes', 'beforeaftermycare' ),
-				$reminder_hours
+				$recordatorio_horas
 			) . '</span>';
 		} else {
 			$status_badge = '<span style="color:#9ca3af;">' . esc_html__( 'Pendiente de programar', 'beforeaftermycare' ) . '</span>';
 		}
 
+		$reminder_options = array(
+			12 => __( '12 horas antes', 'beforeaftermycare' ),
+			24 => __( '24 horas antes', 'beforeaftermycare' ),
+			48 => __( '48 horas antes', 'beforeaftermycare' ),
+			72 => __( '72 horas antes', 'beforeaftermycare' ),
+		);
+
 		ob_start();
 		?>
 <div class="bam-reminder-widget">
+
+	<!-- Header -->
 	<div class="bam-reminder-header">
 		<div class="bam-reminder-icon" aria-hidden="true">&#128276;</div>
 		<div class="bam-reminder-header-text">
-			<h3><?php esc_html_e( 'Tu Próxima Cita', 'beforeaftermycare' ); ?></h3>
-			<p><?php esc_html_e( 'Procedimiento médico programado', 'beforeaftermycare' ); ?></p>
+			<h3><?php esc_html_e( 'Programar Recordatorio de Cita', 'beforeaftermycare' ); ?></h3>
+			<p><?php esc_html_e( 'Ingresa la fecha de tu procedimiento médico', 'beforeaftermycare' ); ?></p>
 		</div>
 	</div>
+
+	<?php if ( $saved ) : ?>
+	<!-- Success notice -->
+	<div class="bam-reminder-notice bam-reminder-notice-success" role="status">
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+		<?php esc_html_e( '¡Listo! Tu cita ha sido programada. Te enviamos un correo de confirmación y recibirás un recordatorio antes de tu procedimiento.', 'beforeaftermycare' ); ?>
+	</div>
+	<?php endif; ?>
+
+	<?php if ( ! empty( $errors ) ) : ?>
+	<!-- Error notice -->
+	<div class="bam-reminder-notice bam-reminder-notice-error" role="alert">
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+		<span>
+		<?php
+		foreach ( $errors as $err ) {
+			echo esc_html( $err ) . '<br>';
+		}
+		?>
+		</span>
+	</div>
+	<?php endif; ?>
+
+	<?php if ( ! empty( $patient->fecha_procedimiento ) ) : ?>
+	<!-- Current appointment status -->
 	<div class="bam-reminder-body">
 		<div class="bam-reminder-row">
 			<span class="bam-reminder-label"><?php esc_html_e( 'Paciente', 'beforeaftermycare' ); ?></span>
@@ -163,7 +302,7 @@ class BAM_Reminder {
 		</div>
 		<div class="bam-reminder-row">
 			<span class="bam-reminder-label"><?php esc_html_e( 'Procedimiento', 'beforeaftermycare' ); ?></span>
-			<span class="bam-reminder-value"><?php echo esc_html( $procedimiento ); ?></span>
+			<span class="bam-reminder-value"><?php echo esc_html( $procedimiento ?: __( 'Colonoscopia', 'beforeaftermycare' ) ); ?></span>
 		</div>
 		<div class="bam-reminder-row">
 			<span class="bam-reminder-label"><?php esc_html_e( 'Fecha y hora', 'beforeaftermycare' ); ?></span>
@@ -174,16 +313,78 @@ class BAM_Reminder {
 			<span class="bam-reminder-value"><?php echo $status_badge; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 		</div>
 	</div>
+	<?php endif; ?>
+
+	<!-- Appointment scheduling form -->
+	<div class="bam-reminder-form-wrap">
+		<p class="bam-reminder-form-title">
+			<?php echo empty( $patient->fecha_procedimiento )
+				? esc_html__( 'Registrar cita', 'beforeaftermycare' )
+				: esc_html__( 'Actualizar cita', 'beforeaftermycare' ); ?>
+		</p>
+		<form class="bam-reminder-form" method="post" action="">
+			<?php wp_nonce_field( self::REMINDER_NONCE_ACTION, 'bam_recordatorio_nonce' ); ?>
+
+			<div class="bam-reminder-field">
+				<label for="bam_procedimiento_<?php echo esc_attr( $uid ); ?>">
+					<?php esc_html_e( 'Tipo de procedimiento', 'beforeaftermycare' ); ?>
+				</label>
+				<input
+					class="bam-input"
+					type="text"
+					id="bam_procedimiento_<?php echo esc_attr( $uid ); ?>"
+					name="bam_procedimiento"
+					value="<?php echo esc_attr( $procedimiento ); ?>"
+					placeholder="<?php esc_attr_e( 'Ej: Colonoscopia', 'beforeaftermycare' ); ?>"
+				>
+			</div>
+
+			<div class="bam-reminder-field">
+				<label for="bam_fecha_procedimiento_<?php echo esc_attr( $uid ); ?>">
+					<?php esc_html_e( 'Fecha y hora del procedimiento', 'beforeaftermycare' ); ?>
+					<span class="bam-required" aria-hidden="true">*</span>
+				</label>
+				<input
+					class="bam-input"
+					type="datetime-local"
+					id="bam_fecha_procedimiento_<?php echo esc_attr( $uid ); ?>"
+					name="bam_fecha_procedimiento"
+					value="<?php echo esc_attr( $fecha_input ); ?>"
+					required
+				>
+			</div>
+
+			<div class="bam-reminder-field">
+				<label for="bam_recordatorio_horas_<?php echo esc_attr( $uid ); ?>">
+					<?php esc_html_e( 'Enviar recordatorio', 'beforeaftermycare' ); ?>
+				</label>
+				<select
+					class="bam-input"
+					id="bam_recordatorio_horas_<?php echo esc_attr( $uid ); ?>"
+					name="bam_recordatorio_horas"
+				>
+					<?php foreach ( $reminder_options as $val => $label ) : ?>
+						<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $recordatorio_horas, $val ); ?>>
+							<?php echo esc_html( $label ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+			</div>
+
+			<button type="submit" name="bam_recordatorio_submit" class="bam-btn bam-btn-primary bam-btn-block">
+				<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+				<?php echo empty( $patient->fecha_procedimiento )
+					? esc_html__( 'Programar cita y activar recordatorio', 'beforeaftermycare' )
+					: esc_html__( 'Actualizar cita y recordatorio', 'beforeaftermycare' ); ?>
+			</button>
+		</form>
+	</div>
+
 	<div class="bam-reminder-footer">
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-		<?php
-		printf(
-			/* translators: %d: hours */
-			esc_html__( 'El correo de recordatorio se enviará %d horas antes de tu procedimiento.', 'beforeaftermycare' ),
-			$reminder_hours
-		);
-		?>
+		<?php esc_html_e( 'Al guardar recibirás un correo de confirmación y un recordatorio automático antes de tu procedimiento.', 'beforeaftermycare' ); ?>
 	</div>
+
 </div>
 		<?php
 		return ob_get_clean();
@@ -203,15 +404,14 @@ class BAM_Reminder {
 		return $name; // Default – overridden per-send via headers.
 	}
 
-	// ── Core logic ────────────────────────────────────────────────────────────
+	// ── Cron callback ─────────────────────────────────────────────────────────
 
 	/**
 	 * Cron callback: check for upcoming procedures and send reminder emails.
+	 * Uses per-patient recordatorio_horas for timing.
 	 */
 	public function check_reminders() {
-		$hours   = (int) get_option( 'bam_reminder_hours', self::DEFAULT_HOURS );
-		$hours   = max( 0, $hours );
-		$patients = BAM_Database::get_patients_for_reminder( $hours );
+		$patients = BAM_Database::get_patients_for_reminder();
 
 		foreach ( $patients as $patient ) {
 			if ( $this->send_reminder_email( $patient ) ) {
@@ -385,6 +585,217 @@ class BAM_Reminder {
             <p style="color:#94a3b8;font-size:12px;margin:0 0 12px;">
               Guías Médicas Personalizadas &middot;
               <a href="<?php echo $site_url; ?>" style="color:#0077b6;text-decoration:none;"><?php echo esc_html( parse_url( home_url(), PHP_URL_HOST ) ); ?></a>
+            </p>
+            <p style="color:#cbd5e1;font-size:11px;margin:0;">
+              Este es un mensaje automático, por favor no responda directamente a este correo.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+      <!-- /Outer card -->
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>
+		<?php
+		return ob_get_clean();
+	}
+
+	// ── Confirmation email ─────────────────────────────────────────────────────
+
+	/**
+	 * Send an immediate confirmation email to a patient after they schedule their appointment.
+	 *
+	 * @param object $patient Patient DB row.
+	 * @return bool Whether wp_mail succeeded.
+	 */
+	public function send_confirmation_email( $patient ) {
+		if ( empty( $patient->correo ) ) {
+			return false;
+		}
+
+		$procedimiento = ! empty( $patient->procedimiento ) ? $patient->procedimiento : __( 'Colonoscopia', 'beforeaftermycare' );
+
+		$subject = sprintf(
+			/* translators: %s – procedure name */
+			__( '¡Cita Confirmada! – %s', 'beforeaftermycare' ),
+			$procedimiento
+		);
+
+		$headers = array(
+			'Content-Type: text/html; charset=UTF-8',
+			'From: Pacifica Salud <noreply@pacificasalud.beforeaftermycare.com>',
+		);
+
+		$body = $this->build_confirmation_email_html( $patient, $procedimiento );
+
+		return wp_mail( $patient->correo, $subject, $body, $headers );
+	}
+
+	/**
+	 * Build the HTML body for the confirmation email.
+	 *
+	 * @param object $patient       Patient DB row.
+	 * @param string $procedimiento Procedure name.
+	 * @return string HTML string.
+	 */
+	private function build_confirmation_email_html( $patient, $procedimiento ) {
+		$nombre    = esc_html( $patient->nombre );
+		$proc_html = esc_html( $procedimiento );
+
+		$recordatorio_horas = isset( $patient->recordatorio_horas ) ? (int) $patient->recordatorio_horas : self::DEFAULT_HOURS;
+
+		// Format procedure date.
+		if ( ! empty( $patient->fecha_procedimiento ) ) {
+			$ts        = strtotime( $patient->fecha_procedimiento );
+			$fecha_fmt = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $ts );
+		} else {
+			$fecha_fmt = __( 'Fecha por confirmar', 'beforeaftermycare' );
+		}
+		$fecha_html = esc_html( $fecha_fmt );
+
+		$site_url = esc_url( home_url() );
+
+		ob_start();
+		?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><?php echo esc_html( sprintf( __( 'Cita Confirmada – %s', 'beforeaftermycare' ), $procedimiento ) ); ?></title>
+</head>
+<body style="margin:0;padding:0;background-color:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f0f4f8;padding:40px 20px;">
+  <tr>
+    <td align="center">
+
+      <!-- Outer card -->
+      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;border-radius:18px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.12);">
+
+        <!-- ── HEADER ── -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#065f46 0%,#059669 60%,#34d399 100%);padding:40px 40px 32px;text-align:center;">
+            <div style="display:inline-block;background:rgba(255,255,255,0.18);border-radius:50%;width:72px;height:72px;line-height:72px;text-align:center;margin-bottom:18px;font-size:36px;">
+              &#10004;
+            </div>
+            <h1 style="color:#ffffff;margin:0 0 6px;font-size:26px;font-weight:700;letter-spacing:-0.5px;">Pacifica Salud</h1>
+            <p style="color:rgba(255,255,255,0.8);margin:0;font-size:14px;letter-spacing:0.03em;">Guías Médicas Personalizadas</p>
+          </td>
+        </tr>
+
+        <!-- ── ALERT BANNER ── -->
+        <tr>
+          <td style="background:#059669;padding:14px 40px;text-align:center;">
+            <p style="color:#ffffff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.02em;">
+              &#128203;&nbsp; ¡Tu Cita ha sido Confirmada!
+            </p>
+          </td>
+        </tr>
+
+        <!-- ── BODY ── -->
+        <tr>
+          <td style="background:#ffffff;padding:40px 40px 32px;">
+
+            <p style="color:#374151;font-size:16px;margin:0 0 20px;line-height:1.6;">
+              Estimado/a <strong style="color:#059669;"><?php echo $nombre; ?></strong>,
+            </p>
+
+            <p style="color:#374151;font-size:15px;line-height:1.75;margin:0 0 32px;">
+              Tu cita para <strong><?php echo $proc_html; ?></strong> ha sido registrada exitosamente en nuestro sistema. A continuación encontrarás el detalle de tu cita.
+            </p>
+
+            <!-- Appointment details card -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;margin-bottom:28px;overflow:hidden;">
+              <tr>
+                <td style="padding:24px 28px;">
+                  <p style="color:#059669;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 16px;padding-bottom:12px;border-bottom:1px solid #bbf7d0;">
+                    &#128203;&nbsp; Detalles de su Cita
+                  </p>
+
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="padding:10px 0;border-bottom:1px solid #dcfce7;">
+                        <span style="display:block;color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px;">Paciente</span>
+                        <span style="color:#0f172a;font-size:15px;font-weight:600;"><?php echo $nombre; ?></span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:10px 0;border-bottom:1px solid #dcfce7;">
+                        <span style="display:block;color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px;">Procedimiento</span>
+                        <span style="color:#0f172a;font-size:15px;font-weight:600;"><?php echo $proc_html; ?></span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:10px 0;border-bottom:1px solid #dcfce7;">
+                        <span style="display:block;color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px;">Fecha y Hora</span>
+                        <span style="color:#059669;font-size:16px;font-weight:700;"><?php echo $fecha_html; ?></span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:10px 0;">
+                        <span style="display:block;color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px;">Recordatorio automático</span>
+                        <span style="color:#059669;font-size:14px;font-weight:600;">
+                          <?php
+                          echo esc_html( sprintf(
+                              /* translators: %d: hours */
+                              __( '%d horas antes del procedimiento', 'beforeaftermycare' ),
+                              $recordatorio_horas
+                          ) );
+                          ?>
+                        </span>
+                      </td>
+                    </tr>
+                  </table>
+
+                </td>
+              </tr>
+            </table>
+
+            <!-- Reminder notice -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;margin-bottom:28px;">
+              <tr>
+                <td style="padding:16px 20px;">
+                  <p style="color:#1e40af;font-size:14px;margin:0;line-height:1.7;">
+                    <strong>&#128276; Recordatorio programado:</strong> Recibirás automáticamente un correo recordatorio <strong><?php echo esc_html( $recordatorio_horas ); ?> horas antes</strong> de tu procedimiento.
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Important notice -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;margin-bottom:28px;">
+              <tr>
+                <td style="padding:16px 20px;">
+                  <p style="color:#92400e;font-size:14px;margin:0;line-height:1.7;">
+                    <strong>&#9888;&#65039; Aviso importante:</strong> Antes de su procedimiento, confirme cualquier instrucción de preparación con el departamento de admisión del hospital. En caso de dudas, comuníquese con su médico tratante.
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <p style="color:#64748b;font-size:14px;line-height:1.75;margin:0 0 8px;">
+              Si necesita modificar la fecha de su cita, puede actualizarla desde su perfil de paciente en nuestra plataforma.
+            </p>
+            <p style="color:#64748b;font-size:14px;line-height:1.75;margin:0;">
+              ¡Gracias por confiar en Pacifica Salud! &#128153;
+            </p>
+
+          </td>
+        </tr>
+
+        <!-- ── FOOTER ── -->
+        <tr>
+          <td style="background:#f8fafc;padding:24px 40px;border-top:1px solid #e2e8f0;text-align:center;">
+            <p style="color:#059669;font-size:16px;font-weight:700;margin:0 0 4px;">Pacifica Salud</p>
+            <p style="color:#94a3b8;font-size:12px;margin:0 0 12px;">
+              Guías Médicas Personalizadas &middot;
+              <a href="<?php echo $site_url; ?>" style="color:#059669;text-decoration:none;"><?php echo esc_html( parse_url( home_url(), PHP_URL_HOST ) ); ?></a>
             </p>
             <p style="color:#cbd5e1;font-size:11px;margin:0;">
               Este es un mensaje automático, por favor no responda directamente a este correo.
