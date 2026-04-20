@@ -28,10 +28,18 @@ define( 'BAM_REDIRECT_URL', 'https://pacificasalud.beforeaftermycare.com/guia-de
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-database.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-registration.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-admin.php';
+require_once BAM_PLUGIN_DIR . 'includes/class-bam-frontend-dashboard.php';
 
 // ── Activation / Deactivation hooks ──────────────────────────────────────────
-register_activation_hook( __FILE__, array( 'BAM_Database', 'install' ) );
+register_activation_hook( __FILE__, 'bam_activate' );
 register_deactivation_hook( __FILE__, array( 'BAM_Database', 'deactivate' ) );
+
+function bam_activate() {
+	BAM_Database::install();
+	BAM_Registration::create_page();
+	BAM_Frontend_Dashboard::create_page();
+	flush_rewrite_rules();
+}
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 add_action( 'plugins_loaded', 'bam_init' );
@@ -43,4 +51,5 @@ function bam_init() {
 	// Boot sub-systems
 	BAM_Registration::get_instance();
 	BAM_Admin::get_instance();
+	BAM_Frontend_Dashboard::get_instance();
 }
