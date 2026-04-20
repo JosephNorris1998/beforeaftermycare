@@ -56,6 +56,14 @@ $reminder_options = array(
 			<div class="bam-notice bam-notice-success" role="status">
 				<?php esc_html_e( 'Configuración de recordatorio guardada correctamente.', 'beforeaftermycare' ); ?>
 			</div>
+		<?php elseif ( 'reminder_sent' === $msg ) : ?>
+			<div class="bam-notice bam-notice-success" role="status">
+				<?php esc_html_e( 'Recordatorio enviado correctamente al correo del paciente.', 'beforeaftermycare' ); ?>
+			</div>
+		<?php elseif ( 'reminder_error' === $msg ) : ?>
+			<div class="bam-notice bam-notice-error" role="alert">
+				<?php esc_html_e( 'No se pudo enviar el recordatorio. Verifica los datos e inténtalo de nuevo.', 'beforeaftermycare' ); ?>
+			</div>
 		<?php endif; ?>
 
 		<!-- Shortcode info card -->
@@ -73,6 +81,105 @@ $reminder_options = array(
 					<span style="font-size:.8rem;color:#64748b;"><?php esc_html_e( 'Muestra: nombre, procedimiento, fecha y estado del recordatorio.', 'beforeaftermycare' ); ?></span>
 				</div>
 			</div>
+		</div>
+
+		<!-- Manual reminder send form -->
+		<div class="bam-card" style="margin-bottom:24px;">
+			<div class="bam-card-header">
+				<h2 class="bam-card-title">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+					<?php esc_html_e( 'Enviar Recordatorio Manual', 'beforeaftermycare' ); ?>
+				</h2>
+			</div>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="padding:24px;" id="bam-manual-reminder-form">
+				<?php wp_nonce_field( 'bam_send_manual_reminder', 'bam_manual_reminder_nonce' ); ?>
+				<input type="hidden" name="action" value="bam_send_manual_reminder">
+
+				<!-- Confirmation checkbox -->
+				<div class="bam-field" style="margin-bottom:20px;">
+					<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:.9rem;font-weight:600;color:#374151;line-height:1.5;">
+						<input
+							type="checkbox"
+							id="bam-reminder-confirm-check"
+							name="bam_reminder_confirmed"
+							value="1"
+							style="margin-top:3px;width:16px;height:16px;flex-shrink:0;cursor:pointer;"
+						>
+						<?php esc_html_e( 'Confirmo que he verificado la fecha con el departamento de admisión del hospital.', 'beforeaftermycare' ); ?>
+					</label>
+				</div>
+
+				<!-- Fields (locked until checkbox is checked) -->
+				<div id="bam-reminder-fields" style="opacity:.4;pointer-events:none;transition:opacity .25s;">
+					<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+						<div class="bam-field">
+							<label class="bam-label" for="bam_reminder_nombre">
+								<?php esc_html_e( 'Nombre completo', 'beforeaftermycare' ); ?>
+							</label>
+							<input
+								class="bam-input"
+								type="text"
+								id="bam_reminder_nombre"
+								name="bam_reminder_nombre"
+								placeholder="<?php esc_attr_e( 'Nombre del paciente', 'beforeaftermycare' ); ?>"
+								disabled
+							>
+						</div>
+
+						<div class="bam-field">
+							<label class="bam-label" for="bam_reminder_correo">
+								<?php esc_html_e( 'Correo electrónico', 'beforeaftermycare' ); ?>
+							</label>
+							<input
+								class="bam-input"
+								type="email"
+								id="bam_reminder_correo"
+								name="bam_reminder_correo"
+								placeholder="paciente@ejemplo.com"
+								disabled
+							>
+						</div>
+
+						<div class="bam-field">
+							<label class="bam-label" for="bam_reminder_fecha">
+								<?php esc_html_e( 'Fecha y hora', 'beforeaftermycare' ); ?>
+							</label>
+							<input
+								class="bam-input"
+								type="datetime-local"
+								id="bam_reminder_fecha"
+								name="bam_reminder_fecha"
+								placeholder="mm/dd/yyyy --:-- --"
+								disabled
+							>
+						</div>
+
+						<div class="bam-field">
+							<label class="bam-label" for="bam_reminder_procedimiento">
+								<?php esc_html_e( 'Procedimiento', 'beforeaftermycare' ); ?>
+							</label>
+							<input
+								class="bam-input"
+								type="text"
+								id="bam_reminder_procedimiento"
+								name="bam_reminder_procedimiento"
+								value="Colonoscopia"
+								disabled
+							>
+						</div>
+
+					</div>
+
+					<div style="margin-top:20px;">
+						<button type="submit" class="bam-btn bam-btn-primary" disabled id="bam-reminder-submit-btn">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+							<?php esc_html_e( 'Enviar recordatorio al correo del paciente', 'beforeaftermycare' ); ?>
+						</button>
+					</div>
+				</div><!-- /#bam-reminder-fields -->
+
+			</form>
 		</div>
 
 		<div style="display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start;">

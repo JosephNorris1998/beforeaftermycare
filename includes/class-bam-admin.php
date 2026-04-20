@@ -36,6 +36,7 @@ class BAM_Admin {
 		add_action( 'admin_post_bam_clear_cache',          array( $this, 'handle_clear_cache' ) );
 		add_action( 'admin_post_bam_save_survey_email',    array( $this, 'handle_save_survey_email' ) );
 		add_action( 'admin_post_bam_save_reminder_hours',  array( $this, 'handle_save_reminder_hours' ) );
+		add_action( 'admin_post_bam_send_manual_reminder', array( $this, 'handle_send_manual_reminder' ) );
 	}
 
 	// ── Menu ──────────────────────────────────────────────────────────────────
@@ -396,6 +397,49 @@ class BAM_Admin {
 		update_option( 'bam_reminder_hours', $hours );
 
 		wp_redirect( add_query_arg( array( 'page' => 'bam-reminders', 'bam_reminder_msg' => 'saved' ), admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handle sending a manual reminder email.
+	 */
+	public function handle_send_manual_reminder() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'No tienes permiso para realizar esta acción.', 'beforeaftermycare' ) );
+		}
+
+		if ( ! isset( $_POST['bam_manual_reminder_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bam_manual_reminder_nonce'] ) ), 'bam_send_manual_reminder' ) ) {
+			wp_die( esc_html__( 'Acción no autorizada.', 'beforeaftermycare' ) );
+		}
+
+		// Must confirm the checkbox.
+		if ( empty( $_POST['bam_reminder_confirmed'] ) ) {
+			wp_redirect( add_query_arg( array( 'page' => 'bam-reminders', 'bam_reminder_msg' => 'reminder_error' ), admin_url( 'admin.php' ) ) );
+			exit;
+		}
+
+		$nombre        = sanitize_text_field( wp_unslash( $_POST['bam_reminder_nombre']        ?? '' ) );
+		$correo        = sanitize_email( wp_unslash( $_POST['bam_reminder_correo']              ?? '' ) );
+		$fecha_raw     = sanitize_text_field( wp_unslash( $_POST['bam_reminder_fecha']          ?? '' ) );
+		$procedimiento = sanitize_text_field( wp_unslash( $_POST['bam_reminder_procedimiento']  ?? 'Colonoscopia' ) );
+
+		if ( empty( $correo ) || ! is_email( $correo ) ) {
+			wp_redirect( add_query_arg( array( 'page' => 'bam-reminders', 'bam_reminder_msg' => 'reminder_error' ), admin_url( 'admin.php' ) ) );
+			exit;
+		}
+
+		// Build a pseudo-patient object for send_reminder_email().
+		$patient = (object) array(
+			'nombre'              => $nombre,
+			'correo'              => $correo,
+			'procedimiento'       => $procedimiento ?: 'Colonoscopia',
+			'fecha_procedimiento' => $fecha_raw ? gmdate( 'Y-m-d H:i:s', strtotime( $fecha_raw ) ) : '',
+		);
+
+		$sent = BAM_Reminder::get_instance()->send_reminder_email( $patient );
+
+		$msg = $sent ? 'reminder_sent' : 'reminder_error';
+		wp_redirect( add_query_arg( array( 'page' => 'bam-reminders', 'bam_reminder_msg' => $msg ), admin_url( 'admin.php' ) ) );
 		exit;
 	}
 }

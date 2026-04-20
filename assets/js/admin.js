@@ -20,6 +20,23 @@
       }
     });
 
+    // ── Manual reminder – confirmation checkbox unlock ────────
+    var $confirmCheck  = $('#bam-reminder-confirm-check');
+    var $reminderFields = $('#bam-reminder-fields');
+    var $submitBtn     = $('#bam-reminder-submit-btn');
+
+    function toggleReminderFields() {
+      var checked = $confirmCheck.is(':checked');
+      $reminderFields.css({ opacity: checked ? '1' : '0.4', 'pointer-events': checked ? 'auto' : 'none' });
+      $reminderFields.find('input').prop('disabled', !checked);
+      $submitBtn.prop('disabled', !checked);
+    }
+
+    if ($confirmCheck.length) {
+      $confirmCheck.on('change', toggleReminderFields);
+      toggleReminderFields(); // init state
+    }
+
     // ── Auto-dismiss notices ──────────────────────────────────
     var notices = document.querySelectorAll('.bam-notice');
     if (notices.length) {
