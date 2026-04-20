@@ -63,8 +63,12 @@ class BAM_Survey {
 
 		ob_start();
 
-		$submitted = isset( $_GET['bam_encuesta'] ) && 'ok' === $_GET['bam_encuesta'];
-		$errors    = $this->get_errors();
+		$this->maybe_start_session();
+		$submitted = ! empty( $_SESSION['bam_survey_success'] );
+		if ( $submitted ) {
+			unset( $_SESSION['bam_survey_success'] );
+		}
+		$errors = $this->get_errors();
 
 		// Pre-fill patient name/email if logged in.
 		$patient_name  = '';
@@ -166,9 +170,11 @@ class BAM_Survey {
 			) );
 		}
 
-		// Redirect with success.
+		// Redirect with success using session flag.
+		$this->maybe_start_session();
+		$_SESSION['bam_survey_success'] = true;
 		$referer = wp_get_referer();
-		$success_url = $referer ? add_query_arg( 'bam_encuesta', 'ok', $referer ) : add_query_arg( 'bam_encuesta', 'ok', home_url( '/' ) );
+		$success_url = $referer ?: home_url( '/' );
 		wp_redirect( $success_url );
 		exit;
 	}

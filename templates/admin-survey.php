@@ -287,7 +287,7 @@ $msg = isset( $_GET['bam_survey_msg'] ) ? sanitize_key( $_GET['bam_survey_msg'] 
 									<td><?php echo $r->recomendaria ? esc_html( $r->recomendaria ) : '—'; ?></td>
 									<td style="max-width:160px;font-size:.8rem;"><?php echo $r->aspectos_mejora ? esc_html( $r->aspectos_mejora ) : '—'; ?></td>
 									<td style="max-width:200px;font-size:.8rem;"><?php echo $r->comentarios ? esc_html( $r->comentarios ) : '—'; ?></td>
-									<td style="white-space:nowrap;"><?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $r->fecha_envio ) ) ); ?></td>
+									<td style="white-space:nowrap;"><?php echo esc_html( mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $r->fecha_envio ) ); ?></td>
 								</tr>
 							<?php endforeach; ?>
 						</tbody>

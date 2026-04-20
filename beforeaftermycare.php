@@ -50,6 +50,11 @@ function bam_init() {
 	// Load text domain for translations
 	load_plugin_textdomain( 'beforeaftermycare', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
+	// Run DB upgrade if needed (handles existing installs when plugin is updated).
+	if ( get_option( BAM_Database::DB_VERSION_KEY ) !== BAM_Database::DB_VERSION ) {
+		BAM_Database::install();
+	}
+
 	// Boot sub-systems
 	BAM_Registration::get_instance();
 	BAM_Admin::get_instance();
