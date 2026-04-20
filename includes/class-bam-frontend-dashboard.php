@@ -177,6 +177,12 @@ class BAM_Frontend_Dashboard {
 			return;
 		}
 
+		// Handle reminder settings POST.
+		if ( isset( $_POST['bam_front_reminder_submit'] ) ) {
+			$this->process_reminder_settings();
+			return;
+		}
+
 		if ( empty( $action ) ) {
 			return;
 		}
@@ -241,6 +247,23 @@ class BAM_Frontend_Dashboard {
 			'guia_asignada' => sanitize_text_field( wp_unslash( $_POST['bam_guia_asignada'] ?? '' ) ) ?: null,
 		);
 
+		// Procedure date and name.
+		$new_fecha = sanitize_text_field( wp_unslash( $_POST['bam_fecha_procedimiento'] ?? '' ) );
+		if ( $new_fecha ) {
+			$data['fecha_procedimiento'] = date( 'Y-m-d H:i:s', strtotime( $new_fecha ) );
+		} else {
+			$data['fecha_procedimiento'] = null;
+		}
+
+		$data['procedimiento'] = sanitize_text_field( wp_unslash( $_POST['bam_procedimiento'] ?? '' ) ) ?: null;
+
+		// Reset reminder flag when procedure date changes.
+		$patient_before = BAM_Database::get_patient( $patient_id );
+		$old_fecha      = $patient_before ? $patient_before->fecha_procedimiento : '';
+		if ( $old_fecha !== ( $data['fecha_procedimiento'] ?? '' ) ) {
+			$data['recordatorio_enviado'] = 0;
+		}
+
 		BAM_Database::update_patient( $patient_id, $data );
 
 		// Keep the WP user in sync.
@@ -295,6 +318,32 @@ class BAM_Frontend_Dashboard {
 		}
 
 		wp_redirect( add_query_arg( array( 'bam_edit' => $patient_id, 'bam_section' => 'pacientes', 'bam_msg' => 'pass_changed' ), $dashboard_url ) );
+		exit;
+	}
+
+	/**
+	 * Process the reminder settings form from the frontend dashboard.
+	 */
+	private function process_reminder_settings() {
+		if ( ! $this->can_access() ) {
+			return;
+		}
+
+		if (
+			! isset( $_POST['bam_front_reminder_nonce'] ) ||
+			! wp_verify_nonce(
+				sanitize_text_field( wp_unslash( $_POST['bam_front_reminder_nonce'] ) ),
+				'bam_front_save_reminder'
+			)
+		) {
+			wp_die( esc_html__( 'Acción no autorizada.', 'beforeaftermycare' ) );
+		}
+
+		$hours = isset( $_POST['bam_reminder_hours'] ) ? absint( $_POST['bam_reminder_hours'] ) : BAM_Reminder::DEFAULT_HOURS;
+		update_option( 'bam_reminder_hours', $hours );
+
+		$dashboard_url = home_url( '/' . self::PAGE_SLUG . '/' );
+		wp_redirect( add_query_arg( array( 'bam_section' => 'recordatorios', 'bam_reminder_msg' => 'saved' ), $dashboard_url ) );
 		exit;
 	}
 }

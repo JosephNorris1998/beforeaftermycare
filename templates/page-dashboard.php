@@ -3,9 +3,10 @@
  * Standalone frontend dashboard – no Elementor header or footer.
  *
  * Sections (controlled via ?bam_section=):
- *   dashboard    – overview with stat cards + latest registrations
- *   pacientes    – full patient list / edit view
- *   estadisticas – statistics charts
+ *   dashboard      – overview with stat cards + latest registrations
+ *   pacientes      – full patient list / edit view
+ *   estadisticas   – statistics charts
+ *   recordatorios  – reminder settings
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -157,6 +158,14 @@ return add_query_arg( 'bam_section', $section_slug, $base );
 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
 </span>
 <span class="bam-sidebar-label"><?php esc_html_e( 'Estadísticas', 'beforeaftermycare' ); ?></span>
+</a>
+
+<a href="<?php echo esc_url( bam_section_url( 'recordatorios', $base_url ) ); ?>"
+   class="bam-sidebar-item <?php echo 'recordatorios' === $section ? 'bam-sidebar-active' : ''; ?>">
+<span class="bam-sidebar-icon">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+</span>
+<span class="bam-sidebar-label"><?php esc_html_e( 'Recordatorios', 'beforeaftermycare' ); ?></span>
 </a>
 
 <div class="bam-sidebar-divider"></div>
@@ -434,6 +443,101 @@ $color = $dist_colors[ $gi % count( $dist_colors ) ];
 </div>
 
 
+<?php elseif ( 'recordatorios' === $section ) : ?>
+<!-- ═══════════════════════════ RECORDATORIOS SECTION ══════════════════ -->
+
+<?php
+$reminder_hours   = (int) get_option( 'bam_reminder_hours', BAM_Reminder::DEFAULT_HOURS );
+$reminder_msg     = isset( $_GET['bam_reminder_msg'] ) ? sanitize_key( $_GET['bam_reminder_msg'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+$reminder_options = array(
+	1    => __( '1 minuto antes (prueba)', 'beforeaftermycare' ),
+	30   => __( '30 minutos antes', 'beforeaftermycare' ),
+	60   => __( '1 hora antes', 'beforeaftermycare' ),
+	360  => __( '6 horas antes', 'beforeaftermycare' ),
+	720  => __( '12 horas antes', 'beforeaftermycare' ),
+	1440 => __( '24 horas antes', 'beforeaftermycare' ),
+	2880 => __( '48 horas antes', 'beforeaftermycare' ),
+	4320 => __( '72 horas antes', 'beforeaftermycare' ),
+);
+?>
+
+<div class="bam-page-header">
+<div>
+<h1 class="bam-page-title"><?php esc_html_e( 'Recordatorios de Procedimiento', 'beforeaftermycare' ); ?></h1>
+<p class="bam-page-desc"><?php esc_html_e( 'Configura cuándo se enviará el correo de recordatorio al paciente.', 'beforeaftermycare' ); ?></p>
+</div>
+</div>
+
+<?php if ( 'saved' === $reminder_msg ) : ?>
+<div class="bam-notice bam-notice-success" role="status"><?php esc_html_e( 'Configuración guardada correctamente.', 'beforeaftermycare' ); ?></div>
+<?php endif; ?>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start;">
+
+<!-- Settings card -->
+<div class="bam-card">
+<div class="bam-card-header">
+<h2 class="bam-card-title">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+<?php esc_html_e( 'Configuración de Envío', 'beforeaftermycare' ); ?>
+</h2>
+</div>
+<form method="post" action="<?php echo esc_url( $base_url ); ?>" style="padding:24px;">
+<?php wp_nonce_field( 'bam_front_save_reminder', 'bam_front_reminder_nonce' ); ?>
+
+<div class="bam-field">
+<label class="bam-label" for="bam_reminder_hours_front">
+<?php esc_html_e( 'Enviar recordatorio', 'beforeaftermycare' ); ?>
+</label>
+<select class="bam-input" id="bam_reminder_hours_front" name="bam_reminder_hours">
+<?php foreach ( $reminder_options as $value => $label ) : ?>
+<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $reminder_hours, $value ); ?>>
+<?php echo esc_html( $label ); ?>
+</option>
+<?php endforeach; ?>
+</select>
+<span style="font-size:0.8rem;color:#64748b;margin-top:6px;display:block;">
+<?php esc_html_e( 'El sistema verificará cada hora y enviará el correo cuando el procedimiento esté dentro del tiempo configurado.', 'beforeaftermycare' ); ?>
+</span>
+</div>
+
+<button type="submit" name="bam_front_reminder_submit" class="bam-btn bam-btn-primary">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+<?php esc_html_e( 'Guardar Configuración', 'beforeaftermycare' ); ?>
+</button>
+</form>
+</div>
+
+<!-- Info panel -->
+<div class="bam-card">
+<div class="bam-card-header">
+<h2 class="bam-card-title">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+<?php esc_html_e( 'Cómo funciona', 'beforeaftermycare' ); ?>
+</h2>
+</div>
+<div style="padding:20px;">
+<ul style="margin:0;padding:0 0 0 18px;display:flex;flex-direction:column;gap:12px;">
+<li style="font-size:0.875rem;color:#475569;line-height:1.6;"><?php esc_html_e( 'Asigna la fecha y hora del procedimiento en el perfil del paciente.', 'beforeaftermycare' ); ?></li>
+<li style="font-size:0.875rem;color:#475569;line-height:1.6;"><?php esc_html_e( 'El sistema verifica automáticamente cada hora.', 'beforeaftermycare' ); ?></li>
+<li style="font-size:0.875rem;color:#475569;line-height:1.6;"><?php esc_html_e( 'El correo se envía desde "Pacifica Salud" con el asunto "Recordatorio de Colonoscopia".', 'beforeaftermycare' ); ?></li>
+<li style="font-size:0.875rem;color:#475569;line-height:1.6;"><?php esc_html_e( 'Al actualizar la fecha del procedimiento, el recordatorio se restablece.', 'beforeaftermycare' ); ?></li>
+</ul>
+<div style="margin-top:20px;padding:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+<p style="margin:0 0 4px;font-size:0.78rem;color:#15803d;font-weight:700;"><?php esc_html_e( 'Configuración actual:', 'beforeaftermycare' ); ?></p>
+<p style="margin:0;font-size:0.875rem;color:#15803d;">
+<?php
+$current_label = isset( $reminder_options[ $reminder_hours ] ) ? $reminder_options[ $reminder_hours ] : $reminder_hours . ' ' . __( 'horas antes', 'beforeaftermycare' );
+echo esc_html( $current_label );
+?>
+</p>
+</div>
+</div>
+</div>
+
+</div>
+
+
 <?php else : ?>
 <!-- ═══════════════════════════ PACIENTES SECTION ════════════════════ -->
 
@@ -476,6 +580,15 @@ $color = $dist_colors[ $gi % count( $dist_colors ) ];
 <label class="bam-label" for="bam_guia_asignada"><?php esc_html_e( 'Guía Asignada', 'beforeaftermycare' ); ?></label>
 <input class="bam-input" type="text" id="bam_guia_asignada" name="bam_guia_asignada" value="<?php echo esc_attr( $edit_patient->guia_asignada ?? '' ); ?>" placeholder="guia-de-colonoscopia">
 </div>
+<div class="bam-field">
+<label class="bam-label" for="bam_procedimiento"><?php esc_html_e( 'Nombre del Procedimiento', 'beforeaftermycare' ); ?></label>
+<input class="bam-input" type="text" id="bam_procedimiento" name="bam_procedimiento" value="<?php echo esc_attr( $edit_patient->procedimiento ?? '' ); ?>" placeholder="<?php esc_attr_e( 'Ej: Colonoscopia', 'beforeaftermycare' ); ?>">
+</div>
+<div class="bam-field">
+<label class="bam-label" for="bam_fecha_procedimiento"><?php esc_html_e( 'Fecha y Hora del Procedimiento', 'beforeaftermycare' ); ?></label>
+<input class="bam-input" type="datetime-local" id="bam_fecha_procedimiento" name="bam_fecha_procedimiento" value="<?php echo esc_attr( ! empty( $edit_patient->fecha_procedimiento ) ? date( 'Y-m-d\TH:i', strtotime( $edit_patient->fecha_procedimiento ) ) : '' ); ?>">
+<span style="font-size:0.8rem;color:#64748b;margin-top:4px;display:block;"><?php esc_html_e( 'El recordatorio se enviará automáticamente según la configuración de horas.', 'beforeaftermycare' ); ?></span>
+</div>
 <div class="bam-form-actions">
 <button type="submit" name="bam_front_update_submit" class="bam-btn bam-btn-primary"><?php esc_html_e( 'Guardar Cambios', 'beforeaftermycare' ); ?></button>
 <a class="bam-btn bam-btn-outline" href="<?php echo esc_url( bam_section_url( 'pacientes', $base_url ) ); ?>"><?php esc_html_e( 'Cancelar', 'beforeaftermycare' ); ?></a>
@@ -501,6 +614,18 @@ $color = $dist_colors[ $gi % count( $dist_colors ) ];
 <div class="bam-info-row">
 <dt><?php esc_html_e( 'Estado', 'beforeaftermycare' ); ?></dt>
 <dd><span class="bam-badge <?php echo $edit_patient->estado ? 'bam-badge-success' : 'bam-badge-inactive'; ?>"><?php echo $edit_patient->estado ? esc_html__( 'Activo', 'beforeaftermycare' ) : esc_html__( 'Inactivo', 'beforeaftermycare' ); ?></span></dd>
+</div>
+<div class="bam-info-row">
+<dt><?php esc_html_e( 'Recordatorio', 'beforeaftermycare' ); ?></dt>
+<dd>
+<?php if ( ! empty( $edit_patient->fecha_procedimiento ) ) : ?>
+<span class="bam-badge <?php echo $edit_patient->recordatorio_enviado ? 'bam-badge-success' : 'bam-badge-warning'; ?>">
+<?php echo $edit_patient->recordatorio_enviado ? esc_html__( 'Enviado', 'beforeaftermycare' ) : esc_html__( 'Pendiente', 'beforeaftermycare' ); ?>
+</span>
+<?php else : ?>
+<span style="color:#94a3b8;font-size:0.8rem;"><?php esc_html_e( 'Sin fecha', 'beforeaftermycare' ); ?></span>
+<?php endif; ?>
+</dd>
 </div>
 </dl>
 </div>

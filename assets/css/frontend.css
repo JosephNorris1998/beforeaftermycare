@@ -39,25 +39,29 @@
 /* Header */
 .bam-registration-header {
   text-align: center;
-  margin-bottom: 32px;
+  margin: -40px -40px 32px;
+  padding: 32px 40px 28px;
+  background: linear-gradient(135deg, #0d2137, #0077b6);
+  border-radius: 16px 16px 0 0;
 }
 
 .bam-logo-mark {
-  display: inline-flex;
-  margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
 }
 
 .bam-registration-title {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #0d1b2a;
+  color: #ffffff;
   margin: 0 0 8px;
   line-height: 1.2;
 }
 
 .bam-registration-subtitle {
   font-size: 0.95rem;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.8);
   margin: 0;
 }
 

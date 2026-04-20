@@ -11,7 +11,7 @@ class BAM_Database {
 
 	/** @var string DB version key used for upgrade checks. */
 	const DB_VERSION_KEY = 'bam_db_version';
-	const DB_VERSION     = '1.1';
+	const DB_VERSION     = '1.2';
 
 	/** @var string Patients table name (without prefix). */
 	const TABLE_PATIENTS = 'bam_patients';
@@ -42,9 +42,13 @@ class BAM_Database {
 			guia_asignada VARCHAR(200)                 DEFAULT NULL,
 			fecha_registro DATETIME           NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			estado        TINYINT(1)          NOT NULL DEFAULT 1,
+			fecha_procedimiento DATETIME               DEFAULT NULL,
+			procedimiento VARCHAR(200)                 DEFAULT NULL,
+			recordatorio_enviado TINYINT(1)   NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			UNIQUE KEY uq_usuario (usuario),
-			UNIQUE KEY uq_correo  (correo)
+			UNIQUE KEY uq_correo  (correo),
+			KEY idx_fecha_proc (fecha_procedimiento)
 		) {$charset_collate};";
 
 		// Survey responses table.
@@ -410,5 +414,52 @@ class BAM_Database {
 			'atencion_dist'   => $atencion_dist,
 			'recomienda_dist' => $recomienda_dist,
 		);
+	}
+
+	// ── Reminders ─────────────────────────────────────────────────────────────
+
+	/**
+	 * Get patients whose procedure is coming up within $hours_before hours
+	 * and whose reminder has not yet been sent.
+	 *
+	 * @param int $hours_before Hours before procedure to trigger reminder.
+	 * @return array Array of patient objects.
+	 */
+	public static function get_patients_for_reminder( $hours_before = 24 ) {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_PATIENTS;
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table}
+				 WHERE estado = 1
+				   AND recordatorio_enviado = 0
+				   AND fecha_procedimiento IS NOT NULL
+				   AND fecha_procedimiento > NOW()
+				   AND fecha_procedimiento <= DATE_ADD(NOW(), INTERVAL %d HOUR)",
+				(int) $hours_before
+			)
+		) ?: array();
+		// phpcs:enable
+	}
+
+	/**
+	 * Mark a patient's reminder as sent.
+	 *
+	 * @param int $id Patient ID.
+	 * @return bool
+	 */
+	public static function mark_reminder_sent( $id ) {
+		return self::update_patient( $id, array( 'recordatorio_enviado' => 1 ) );
+	}
+
+	/**
+	 * Reset reminder sent flag (e.g. when procedure date is changed).
+	 *
+	 * @param int $id Patient ID.
+	 * @return bool
+	 */
+	public static function reset_reminder( $id ) {
+		return self::update_patient( $id, array( 'recordatorio_enviado' => 0 ) );
 	}
 }

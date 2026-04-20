@@ -84,6 +84,17 @@ $msg = isset( $_GET['bam_msg'] ) ? sanitize_key( $_GET['bam_msg'] ) : '';
 						<input class="bam-input" type="text" id="bam_guia_asignada" name="bam_guia_asignada" value="<?php echo esc_attr( $patient->guia_asignada ?? '' ); ?>" placeholder="guia-de-colonoscopia">
 					</div>
 
+					<div class="bam-field">
+						<label class="bam-label" for="bam_procedimiento"><?php esc_html_e( 'Nombre del Procedimiento', 'beforeaftermycare' ); ?></label>
+						<input class="bam-input" type="text" id="bam_procedimiento" name="bam_procedimiento" value="<?php echo esc_attr( $patient->procedimiento ?? '' ); ?>" placeholder="<?php esc_attr_e( 'Ej: Colonoscopia', 'beforeaftermycare' ); ?>">
+					</div>
+
+					<div class="bam-field">
+						<label class="bam-label" for="bam_fecha_procedimiento"><?php esc_html_e( 'Fecha y Hora del Procedimiento', 'beforeaftermycare' ); ?></label>
+						<input class="bam-input" type="datetime-local" id="bam_fecha_procedimiento" name="bam_fecha_procedimiento" value="<?php echo esc_attr( ! empty( $patient->fecha_procedimiento ) ? date( 'Y-m-d\TH:i', strtotime( $patient->fecha_procedimiento ) ) : '' ); ?>">
+						<span style="font-size:0.8rem;color:#64748b;margin-top:4px;display:block;"><?php esc_html_e( 'El recordatorio se enviará automáticamente según la configuración de horas establecida.', 'beforeaftermycare' ); ?></span>
+					</div>
+
 					<button type="submit" name="bam_update_submit" class="bam-btn bam-btn-primary">
 						<?php esc_html_e( 'Guardar Cambios', 'beforeaftermycare' ); ?>
 					</button>
@@ -119,6 +130,18 @@ $msg = isset( $_GET['bam_msg'] ) ? sanitize_key( $_GET['bam_msg'] ) : '';
 								<span class="bam-badge <?php echo $patient->estado ? 'bam-badge-success' : 'bam-badge-inactive'; ?>">
 									<?php echo $patient->estado ? esc_html__( 'Activo', 'beforeaftermycare' ) : esc_html__( 'Inactivo', 'beforeaftermycare' ); ?>
 								</span>
+							</dd>
+						</div>
+						<div class="bam-info-row">
+							<dt><?php esc_html_e( 'Recordatorio', 'beforeaftermycare' ); ?></dt>
+							<dd>
+								<?php if ( ! empty( $patient->fecha_procedimiento ) ) : ?>
+									<span class="bam-badge <?php echo $patient->recordatorio_enviado ? 'bam-badge-success' : 'bam-badge-warning'; ?>">
+										<?php echo $patient->recordatorio_enviado ? esc_html__( 'Enviado', 'beforeaftermycare' ) : esc_html__( 'Pendiente', 'beforeaftermycare' ); ?>
+									</span>
+								<?php else : ?>
+									<span style="color:#94a3b8;font-size:0.8rem;"><?php esc_html_e( 'Sin fecha', 'beforeaftermycare' ); ?></span>
+								<?php endif; ?>
 							</dd>
 						</div>
 					</dl>

@@ -30,17 +30,24 @@ require_once BAM_PLUGIN_DIR . 'includes/class-bam-registration.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-admin.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-frontend-dashboard.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-survey.php';
+require_once BAM_PLUGIN_DIR . 'includes/class-bam-reminder.php';
 
 // ── Activation / Deactivation hooks ──────────────────────────────────────────
 register_activation_hook( __FILE__, 'bam_activate' );
-register_deactivation_hook( __FILE__, array( 'BAM_Database', 'deactivate' ) );
+register_deactivation_hook( __FILE__, 'bam_deactivate' );
 
 function bam_activate() {
 	BAM_Database::install();
 	BAM_Registration::create_page();
 	BAM_Frontend_Dashboard::create_page();
 	BAM_Frontend_Dashboard::create_login_page();
+	BAM_Reminder::schedule_cron();
 	flush_rewrite_rules();
+}
+
+function bam_deactivate() {
+	BAM_Database::deactivate();
+	BAM_Reminder::unschedule_cron();
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
@@ -55,9 +62,16 @@ function bam_init() {
 		BAM_Database::install();
 	}
 
+	// Register cron schedule before any scheduling calls.
+	add_filter( 'cron_schedules', array( 'BAM_Reminder', 'add_cron_schedule' ) );
+
+	// Ensure cron is scheduled (in case the plugin was re-activated without deactivation).
+	BAM_Reminder::schedule_cron();
+
 	// Boot sub-systems
 	BAM_Registration::get_instance();
 	BAM_Admin::get_instance();
 	BAM_Frontend_Dashboard::get_instance();
 	BAM_Survey::get_instance();
+	BAM_Reminder::get_instance();
 }
