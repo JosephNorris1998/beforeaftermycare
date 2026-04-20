@@ -34,19 +34,7 @@ $error = isset( $_GET['bam_login_error'] ) ? sanitize_key( $_GET['bam_login_erro
 
 		<div class="bam-login-header">
 			<div class="bam-login-logo">
-				<?php
-				$custom_logo_id = get_theme_mod( 'custom_logo' );
-				if ( $custom_logo_id ) {
-					echo wp_get_attachment_image( $custom_logo_id, array( 120, 60 ), false, array( 'class' => 'bam-site-logo', 'alt' => esc_attr( get_bloginfo( 'name' ) ) ) );
-				} else {
-					?>
-					<svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-						<circle cx="24" cy="24" r="24" fill="#0077b6"/>
-						<path d="M24 12c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12S30.627 12 24 12zm1 17h-2v-6h2v6zm0-8h-2v-2h2v2z" fill="#fff"/>
-					</svg>
-					<?php
-				}
-				?>
+				<img src="https://pacificasalud.beforeaftermycare.com/wp-content/uploads/2026/04/logo_web_main.svg" alt="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>" class="bam-site-logo">
 			</div>
 			<h1 class="bam-login-title"><?php esc_html_e( 'Guías Médicas', 'beforeaftermycare' ); ?></h1>
 			<p class="bam-login-subtitle"><?php esc_html_e( 'Accede al panel de administración', 'beforeaftermycare' ); ?></p>

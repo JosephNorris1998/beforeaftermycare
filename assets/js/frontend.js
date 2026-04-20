@@ -1,6 +1,6 @@
 /**
  * Before After My Care – Frontend JS
- * Handles show/hide password toggle on registration form.
+ * Handles show/hide password toggle on registration form and survey modal.
  */
 (function () {
   'use strict';
@@ -43,6 +43,47 @@
         hint.style.fontSize = '0.78rem';
         hint.style.marginTop = '4px';
       });
+    }
+
+    // ── Survey modal ──────────────────────────────────────────
+    var openBtn    = document.getElementById('bam-survey-open');
+    var modal      = document.getElementById('bam-survey-modal');
+    var closeBtn   = document.getElementById('bam-survey-close');
+    var cancelBtn  = document.getElementById('bam-survey-cancel');
+    var backdrop   = document.getElementById('bam-survey-backdrop');
+
+    if (!openBtn || !modal) return;
+
+    function openModal() {
+      modal.removeAttribute('hidden');
+      document.body.style.overflow = 'hidden';
+      var firstInput = modal.querySelector('input, textarea, select, button');
+      if (firstInput) firstInput.focus();
+    }
+
+    function closeModal() {
+      modal.setAttribute('hidden', '');
+      document.body.style.overflow = '';
+      openBtn.focus();
+    }
+
+    openBtn.addEventListener('click', openModal);
+
+    if (closeBtn)  closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (backdrop)  backdrop.addEventListener('click', closeModal);
+
+    // Close on Escape key
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !modal.hasAttribute('hidden')) {
+        closeModal();
+      }
+    });
+
+    // If there are validation errors, re-open the modal on page load
+    var hasErrors = modal && modal.querySelector('.bam-notice-error, .bam-field-error');
+    if (hasErrors) {
+      openModal();
     }
   });
 })();
