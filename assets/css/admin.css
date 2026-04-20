@@ -1,0 +1,527 @@
+/* ============================================================
+   Before After My Care – Admin Dashboard Styles
+   ============================================================ */
+
+/* ── Reset & Variables ───────────────────────────────────────── */
+.bam-admin-wrap *,
+.bam-admin-wrap *::before,
+.bam-admin-wrap *::after {
+  box-sizing: border-box;
+}
+
+.bam-admin-wrap {
+  --bam-primary:   #0077b6;
+  --bam-primary-d: #005f92;
+  --bam-success:   #16a34a;
+  --bam-warning:   #d97706;
+  --bam-danger:    #dc2626;
+  --bam-bg:        #f1f5f9;
+  --bam-surface:   #ffffff;
+  --bam-border:    #e2e8f0;
+  --bam-text:      #0f172a;
+  --bam-muted:     #64748b;
+  --bam-radius:    10px;
+  --bam-shadow:    0 1px 8px rgba(0,0,0,0.07);
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bam-bg);
+  color: var(--bam-text);
+  min-height: 100vh;
+}
+
+/* ── Topbar ──────────────────────────────────────────────────── */
+.bam-topbar {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 0 28px;
+  height: 58px;
+  background: var(--bam-primary);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+.bam-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.bam-topbar-nav {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.bam-nav-link {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255,255,255,0.85);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.bam-nav-link:hover,
+.bam-nav-link.bam-nav-active {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+}
+
+/* ── Main ────────────────────────────────────────────────────── */
+.bam-main {
+  padding: 28px 32px 60px;
+  max-width: 1280px;
+}
+
+/* ── Page header ─────────────────────────────────────────────── */
+.bam-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.bam-page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--bam-text);
+  margin: 0;
+}
+
+.bam-page-desc {
+  font-size: 0.9rem;
+  color: var(--bam-muted);
+  margin: 4px 0 0;
+}
+
+.bam-back-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: var(--bam-primary);
+  text-decoration: none;
+  margin-bottom: 4px;
+}
+
+.bam-back-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Notices ─────────────────────────────────────────────────── */
+.bam-notice {
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.bam-notice-success {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.bam-notice-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* ── Stat grid ───────────────────────────────────────────────── */
+.bam-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.bam-stat-card {
+  background: var(--bam-surface);
+  border-radius: var(--bam-radius);
+  box-shadow: var(--bam-shadow);
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.bam-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bam-icon-blue   { background: #dbeafe; color: #1d4ed8; }
+.bam-icon-green  { background: #dcfce7; color: #15803d; }
+.bam-icon-purple { background: #ede9fe; color: #7c3aed; }
+.bam-icon-orange { background: #ffedd5; color: #c2410c; }
+
+.bam-stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.bam-stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--bam-text);
+  line-height: 1;
+}
+
+.bam-stat-label {
+  font-size: 0.8rem;
+  color: var(--bam-muted);
+  margin-top: 4px;
+}
+
+/* ── Card ────────────────────────────────────────────────────── */
+.bam-card {
+  background: var(--bam-surface);
+  border-radius: var(--bam-radius);
+  box-shadow: var(--bam-shadow);
+  border: 1px solid var(--bam-border);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.bam-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--bam-border);
+  gap: 12px;
+}
+
+.bam-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--bam-text);
+}
+
+.bam-card-danger {
+  border-color: #fecaca;
+}
+
+.bam-card-danger .bam-card-header {
+  background: #fef2f2;
+  border-bottom-color: #fecaca;
+}
+
+/* ── Table ───────────────────────────────────────────────────── */
+.bam-table-wrapper {
+  overflow-x: auto;
+}
+
+.bam-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.bam-table thead {
+  background: #f8fafc;
+}
+
+.bam-table th {
+  padding: 11px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--bam-muted);
+  border-bottom: 1px solid var(--bam-border);
+  white-space: nowrap;
+}
+
+.bam-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bam-border);
+  color: var(--bam-text);
+  vertical-align: middle;
+}
+
+.bam-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.bam-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* ── Link ────────────────────────────────────────────────────── */
+.bam-link {
+  color: var(--bam-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.bam-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Badges ──────────────────────────────────────────────────── */
+.bam-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bam-badge-success  { background: #dcfce7; color: #15803d; }
+.bam-badge-inactive { background: #f1f5f9; color: #64748b; }
+.bam-badge-warning  { background: #ffedd5; color: #c2410c; }
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.bam-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  text-decoration: none !important;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.bam-btn-primary {
+  background: var(--bam-primary);
+  color: #fff !important;
+  border-color: var(--bam-primary);
+}
+.bam-btn-primary:hover {
+  background: var(--bam-primary-d);
+  border-color: var(--bam-primary-d);
+  color: #fff !important;
+}
+
+.bam-btn-outline {
+  background: transparent;
+  color: var(--bam-primary) !important;
+  border-color: var(--bam-primary);
+}
+.bam-btn-outline:hover {
+  background: #eff6ff;
+}
+
+.bam-btn-warning {
+  background: #fef3c7;
+  color: #92400e !important;
+  border-color: #fde68a;
+}
+.bam-btn-warning:hover {
+  background: #fde68a;
+}
+
+.bam-btn-danger {
+  background: #fee2e2;
+  color: #991b1b !important;
+  border-color: #fca5a5;
+}
+.bam-btn-danger:hover {
+  background: #fca5a5;
+}
+
+.bam-btn-sm  { padding: 6px 14px; font-size: 0.82rem; }
+.bam-btn-xs  { padding: 4px 10px; font-size: 0.78rem; border-radius: 5px; }
+.bam-btn-block { display: flex; width: 100%; margin-bottom: 8px; }
+
+/* ── Actions cell ────────────────────────────────────────────── */
+.bam-actions-cell {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+/* ── Pagination ──────────────────────────────────────────────── */
+.bam-pagination {
+  display: flex;
+  gap: 6px;
+  padding: 14px 20px;
+  flex-wrap: wrap;
+}
+
+.bam-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--bam-primary);
+  border: 1.5px solid var(--bam-border);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.bam-page-btn:hover {
+  background: #eff6ff;
+  border-color: var(--bam-primary);
+}
+
+.bam-page-current {
+  background: var(--bam-primary);
+  color: #fff;
+  border-color: var(--bam-primary);
+  pointer-events: none;
+}
+
+/* ── Empty state ─────────────────────────────────────────────── */
+.bam-empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--bam-muted);
+}
+
+/* ── Search form ─────────────────────────────────────────────── */
+.bam-search-form {
+  margin-bottom: 20px;
+}
+
+.bam-search-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bam-search-input {
+  flex: 1;
+  min-width: 240px;
+}
+
+/* ── Result count ────────────────────────────────────────────── */
+.bam-result-count {
+  font-size: 0.875rem;
+  color: var(--bam-muted);
+}
+
+/* ── Fields (reused in admin forms) ─────────────────────────── */
+.bam-field {
+  margin-bottom: 18px;
+}
+
+.bam-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.bam-input {
+  display: block;
+  width: 100%;
+  padding: 9px 13px;
+  border: 1.5px solid var(--bam-border);
+  border-radius: 7px;
+  font-size: 0.9rem;
+  color: var(--bam-text);
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+
+.bam-input:focus {
+  border-color: var(--bam-primary);
+  box-shadow: 0 0 0 3px rgba(0,119,182,0.12);
+}
+
+/* ── Detail layout ───────────────────────────────────────────── */
+.bam-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .bam-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Info list ───────────────────────────────────────────────── */
+.bam-info-list {
+  padding: 0;
+  margin: 0;
+}
+
+.bam-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--bam-border);
+  gap: 12px;
+  font-size: 0.875rem;
+}
+
+.bam-info-row:last-child {
+  border-bottom: none;
+}
+
+.bam-info-row dt {
+  font-weight: 600;
+  color: var(--bam-muted);
+  white-space: nowrap;
+}
+
+.bam-info-row dd {
+  margin: 0;
+  color: var(--bam-text);
+  text-align: right;
+}
+
+/* ── Danger zone ─────────────────────────────────────────────── */
+.bam-danger-actions {
+  padding: 16px 20px;
+}
+
+/* ── Detail form card ────────────────────────────────────────── */
+.bam-detail-form-card form {
+  padding: 20px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .bam-main {
+    padding: 20px 16px 40px;
+  }
+
+  .bam-topbar {
+    padding: 0 16px;
+  }
+
+  .bam-topbar-brand span {
+    display: none;
+  }
+
+  .bam-stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
