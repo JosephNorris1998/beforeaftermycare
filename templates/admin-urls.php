@@ -172,6 +172,16 @@ $urls = array(
 								</a>
 							</td>
 						</tr>
+						<tr>
+							<td><code>[bam_encuesta]</code></td>
+							<td><?php esc_html_e( 'Muestra la encuesta de satisfacción del paciente (modal con calificación por momentos).', 'beforeaftermycare' ); ?></td>
+							<td><?php esc_html_e( 'Cualquier página pública', 'beforeaftermycare' ); ?></td>
+						</tr>
+						<tr>
+							<td><code>[bam_recordatorio]</code></td>
+							<td><?php esc_html_e( 'Muestra al paciente (sesión iniciada) su próxima cita, procedimiento y estado del recordatorio.', 'beforeaftermycare' ); ?></td>
+							<td><?php esc_html_e( 'Cualquier página pública', 'beforeaftermycare' ); ?></td>
+						</tr>
 					</tbody>
 				</table>
 			</div>
