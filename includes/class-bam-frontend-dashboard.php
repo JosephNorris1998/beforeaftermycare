@@ -19,6 +19,9 @@ class BAM_Frontend_Dashboard {
 	/** Slug of the auto-created dashboard page. */
 	const PAGE_SLUG = 'dashboardplugin';
 
+	/** Slug of the auto-created login page. */
+	const PAGE_LOGIN_SLUG = 'loginplugin';
+
 	// ── Singleton ─────────────────────────────────────────────────────────────
 
 	public static function get_instance() {
@@ -31,6 +34,7 @@ class BAM_Frontend_Dashboard {
 	private function __construct() {
 		add_filter( 'template_include', array( $this, 'intercept_template' ) );
 		add_action( 'init',             array( $this, 'handle_actions' ) );
+		add_action( 'init',             array( $this, 'handle_login' ) );
 	}
 
 	// ── Page creation ──────────────────────────────────────────────────────────
@@ -52,25 +56,50 @@ class BAM_Frontend_Dashboard {
 		) );
 	}
 
+	/**
+	 * Create the login page (called on plugin activation).
+	 */
+	public static function create_login_page() {
+		if ( get_page_by_path( self::PAGE_LOGIN_SLUG ) ) {
+			return; // Already exists.
+		}
+
+		wp_insert_post( array(
+			'post_title'   => __( 'Login – Guías Médicas', 'beforeaftermycare' ),
+			'post_name'    => self::PAGE_LOGIN_SLUG,
+			'post_status'  => 'publish',
+			'post_type'    => 'page',
+			'post_content' => '',
+		) );
+	}
+
 	// ── Template override ──────────────────────────────────────────────────────
 
 	/**
-	 * Serve our standalone full-HTML dashboard template for /dashboardplugin/.
+	 * Serve our standalone full-HTML templates for our pages.
 	 *
 	 * @param string $template
 	 * @return string
 	 */
 	public function intercept_template( $template ) {
-		if ( ! is_page( self::PAGE_SLUG ) ) {
-			return $template;
+		if ( is_page( self::PAGE_LOGIN_SLUG ) ) {
+			// Already logged in and has access → go directly to dashboard.
+			if ( $this->can_access() ) {
+				wp_redirect( home_url( '/' . self::PAGE_SLUG . '/' ) );
+				exit;
+			}
+			return BAM_PLUGIN_DIR . 'templates/page-login.php';
 		}
 
-		if ( ! $this->can_access() ) {
-			wp_redirect( wp_login_url( home_url( '/' . self::PAGE_SLUG . '/' ) ) );
-			exit;
+		if ( is_page( self::PAGE_SLUG ) ) {
+			if ( ! $this->can_access() ) {
+				wp_redirect( home_url( '/' . self::PAGE_LOGIN_SLUG . '/' ) );
+				exit;
+			}
+			return BAM_PLUGIN_DIR . 'templates/page-dashboard.php';
 		}
 
-		return BAM_PLUGIN_DIR . 'templates/page-dashboard.php';
+		return $template;
 	}
 
 	// ── Access control ─────────────────────────────────────────────────────────
@@ -84,11 +113,54 @@ class BAM_Frontend_Dashboard {
 		return is_user_logged_in() && current_user_can( 'manage_options' );
 	}
 
+	// ── Login handling ─────────────────────────────────────────────────────────
+
+	/**
+	 * Process the login form submitted from the custom login page.
+	 */
+	public function handle_login() {
+		if ( ! isset( $_POST['bam_login_submit'] ) ) {
+			return;
+		}
+
+		if (
+			! isset( $_POST['bam_login_nonce'] ) ||
+			! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bam_login_nonce'] ) ), 'bam_login' )
+		) {
+			return;
+		}
+
+		$username = isset( $_POST['bam_username'] ) ? sanitize_user( wp_unslash( $_POST['bam_username'] ) ) : '';
+		$password = isset( $_POST['bam_password'] ) ? $_POST['bam_password'] : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+
+		$user = wp_signon( array(
+			'user_login'    => $username,
+			'user_password' => $password,
+			'remember'      => ! empty( $_POST['bam_remember'] ),
+		), is_ssl() );
+
+		$login_url = home_url( '/' . self::PAGE_LOGIN_SLUG . '/' );
+
+		if ( is_wp_error( $user ) ) {
+			wp_redirect( add_query_arg( 'bam_login_error', '1', $login_url ) );
+			exit;
+		}
+
+		if ( ! user_can( $user, 'manage_options' ) ) {
+			wp_logout();
+			wp_redirect( add_query_arg( 'bam_login_error', 'noaccess', $login_url ) );
+			exit;
+		}
+
+		wp_redirect( home_url( '/' . self::PAGE_SLUG . '/' ) );
+		exit;
+	}
+
 	// ── Action handling ────────────────────────────────────────────────────────
 
 	/**
-	 * Process GET (delete / toggle) and POST (update) actions sent from the
-	 * frontend dashboard.  Hooked to 'init' so redirects can still be issued.
+	 * Process GET (delete / toggle) and POST (update / change_password) actions.
+	 * Hooked to 'init' so redirects can still be issued.
 	 */
 	public function handle_actions() {
 		$action = isset( $_GET['bam_front_action'] ) ? sanitize_key( $_GET['bam_front_action'] ) : '';
@@ -96,6 +168,12 @@ class BAM_Frontend_Dashboard {
 		// Handle POST update first.
 		if ( isset( $_POST['bam_front_update_submit'] ) ) {
 			$this->process_update();
+			return;
+		}
+
+		// Handle password change POST.
+		if ( isset( $_POST['bam_front_change_pass_submit'] ) ) {
+			$this->process_password_change();
 			return;
 		}
 
@@ -126,12 +204,12 @@ class BAM_Frontend_Dashboard {
 					wp_delete_user( (int) $patient->wp_user_id );
 				}
 				BAM_Database::delete_patient( $patient_id );
-				wp_redirect( add_query_arg( 'bam_msg', 'deleted', $dashboard_url ) );
+				wp_redirect( add_query_arg( array( 'bam_section' => 'pacientes', 'bam_msg' => 'deleted' ), $dashboard_url ) );
 				exit;
 
 			case 'toggle':
 				BAM_Database::toggle_status( $patient_id );
-				wp_redirect( add_query_arg( 'bam_msg', 'toggled', $dashboard_url ) );
+				wp_redirect( add_query_arg( array( 'bam_section' => 'pacientes', 'bam_msg' => 'toggled' ), $dashboard_url ) );
 				exit;
 		}
 	}
@@ -177,7 +255,46 @@ class BAM_Frontend_Dashboard {
 		}
 
 		$dashboard_url = home_url( '/' . self::PAGE_SLUG . '/' );
-		wp_redirect( add_query_arg( array( 'bam_msg' => 'updated', 'bam_edit' => $patient_id ), $dashboard_url ) );
+		wp_redirect( add_query_arg( array( 'bam_msg' => 'updated', 'bam_edit' => $patient_id, 'bam_section' => 'pacientes' ), $dashboard_url ) );
+		exit;
+	}
+
+	/**
+	 * Process the password-change form submitted from the edit view.
+	 */
+	private function process_password_change() {
+		if ( ! $this->can_access() ) {
+			return;
+		}
+
+		$patient_id = isset( $_POST['bam_id'] ) ? absint( $_POST['bam_id'] ) : 0;
+
+		if (
+			! isset( $_POST['bam_front_change_pass_nonce'] ) ||
+			! wp_verify_nonce(
+				sanitize_text_field( wp_unslash( $_POST['bam_front_change_pass_nonce'] ) ),
+				'bam_front_change_pass_' . $patient_id
+			)
+		) {
+			wp_die( esc_html__( 'Acción no autorizada.', 'beforeaftermycare' ) );
+		}
+
+		$new_pass  = isset( $_POST['bam_new_password'] )  ? $_POST['bam_new_password']  : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+		$new_pass2 = isset( $_POST['bam_new_password2'] ) ? $_POST['bam_new_password2'] : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+
+		$dashboard_url = home_url( '/' . self::PAGE_SLUG . '/' );
+
+		if ( empty( $new_pass ) || $new_pass !== $new_pass2 ) {
+			wp_redirect( add_query_arg( array( 'bam_edit' => $patient_id, 'bam_section' => 'pacientes', 'bam_msg' => 'pass_mismatch' ), $dashboard_url ) );
+			exit;
+		}
+
+		$patient = BAM_Database::get_patient( $patient_id );
+		if ( $patient && $patient->wp_user_id ) {
+			wp_set_password( $new_pass, (int) $patient->wp_user_id );
+		}
+
+		wp_redirect( add_query_arg( array( 'bam_edit' => $patient_id, 'bam_section' => 'pacientes', 'bam_msg' => 'pass_changed' ), $dashboard_url ) );
 		exit;
 	}
 }
