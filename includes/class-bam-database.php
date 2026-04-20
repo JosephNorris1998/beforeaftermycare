@@ -190,7 +190,18 @@ class BAM_Database {
 	}
 
 	/**
-	 * Check whether a username or email already exists.
+	 * Get a single patient record by WordPress user ID.
+	 *
+	 * @param int $wp_user_id WordPress user ID.
+	 * @return object|null
+	 */
+	public static function get_patient_by_wp_user_id( $wp_user_id ) {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_PATIENTS;
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE wp_user_id = %d LIMIT 1", (int) $wp_user_id ) );
+	}
+
+	/**
 	 *
 	 * @param string $usuario
 	 * @param string $correo

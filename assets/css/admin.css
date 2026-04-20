@@ -875,7 +875,120 @@
   color: #fff;
 }
 
-/* ── Responsive ──────────────────────────────────────────────── */
+/* ── Cache page ──────────────────────────────────────────────── */
+.bam-cache-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.bam-cache-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.bam-cache-dot-ok  { background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.2); }
+.bam-cache-dot-off { background: #94a3b8; box-shadow: 0 0 0 3px rgba(148,163,184,0.2); }
+
+.bam-cache-tips {
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bam-cache-tips li {
+  font-size: 0.875rem;
+  color: var(--bam-muted);
+  line-height: 1.6;
+}
+
+.bam-btn-lg { padding: 12px 28px; font-size: 0.95rem; }
+
+/* ── URL cards grid ──────────────────────────────────────────── */
+.bam-url-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.bam-url-card {
+  background: var(--bam-surface);
+  border-radius: var(--bam-radius);
+  box-shadow: var(--bam-shadow);
+  border: 1px solid var(--bam-border);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.bam-url-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+}
+
+.bam-url-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.bam-url-card-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bam-url-card-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--bam-text);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.bam-url-card-desc {
+  font-size: 0.82rem;
+  color: var(--bam-muted);
+  margin: 0;
+  line-height: 1.55;
+}
+
+.bam-url-card-link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.bam-url-code {
+  flex: 1;
+  font-size: 0.75rem;
+  background: #f1f5f9;
+  border: 1px solid var(--bam-border);
+  border-radius: 5px;
+  padding: 4px 8px;
+  color: var(--bam-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  display: block;
+}
+
+.bam-badge-info { background: #dbeafe; color: #1d4ed8; }
+
+@media (max-width: 640px) {
+  .bam-url-grid { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 900px) {
   .bam-stats-row { grid-template-columns: 1fr; }
 }

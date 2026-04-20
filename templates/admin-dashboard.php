@@ -28,6 +28,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<a class="bam-nav-link" href="<?php echo esc_url( admin_url( 'admin.php?page=bam-patients' ) ); ?>">
 				<?php esc_html_e( 'Pacientes', 'beforeaftermycare' ); ?>
 			</a>
+			<a class="bam-nav-link" href="<?php echo esc_url( admin_url( 'admin.php?page=bam-urls' ) ); ?>">
+				<?php esc_html_e( 'URLs del Plugin', 'beforeaftermycare' ); ?>
+			</a>
+			<a class="bam-nav-link" href="<?php echo esc_url( admin_url( 'admin.php?page=bam-cache' ) ); ?>">
+				<?php esc_html_e( 'Limpiar Caché', 'beforeaftermycare' ); ?>
+			</a>
 		</nav>
 	</header>
 
