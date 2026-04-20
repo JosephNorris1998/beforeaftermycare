@@ -717,7 +717,7 @@
   color: var(--bam-muted);
   text-align: center;
   white-space: nowrap;
-  transform: rotate(-30deg);
+  transform: rotate(-20deg);
   transform-origin: center;
   margin-top: 2px;
 }

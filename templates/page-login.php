@@ -69,7 +69,7 @@ $error = isset( $_GET['bam_login_error'] ) ? sanitize_key( $_GET['bam_login_erro
 					autocomplete="username"
 					required
 					autofocus
-					value="<?php echo isset( $_POST['bam_username'] ) ? esc_attr( sanitize_user( wp_unslash( $_POST['bam_username'] ) ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing ?>"
+					value=""
 				>
 			</div>
 
@@ -87,7 +87,7 @@ $error = isset( $_GET['bam_login_error'] ) ? sanitize_key( $_GET['bam_login_erro
 						autocomplete="current-password"
 						required
 					>
-					<button type="button" class="bam-toggle-pass" aria-label="<?php esc_attr_e( 'Mostrar / ocultar contraseña', 'beforeaftermycare' ); ?>">
+					<button type="button" class="bam-toggle-pass" data-target="bam_password" aria-label="<?php esc_attr_e( 'Mostrar / ocultar contraseña', 'beforeaftermycare' ); ?>">
 						<svg class="bam-eye-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
 						<svg class="bam-eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
 					</button>
@@ -120,17 +120,19 @@ $error = isset( $_GET['bam_login_error'] ) ? sanitize_key( $_GET['bam_login_erro
 	var btn = document.querySelector('.bam-toggle-pass');
 	if (!btn) return;
 	btn.addEventListener('click', function () {
-		var input  = document.getElementById('bam_password');
-		var show   = btn.querySelector('.bam-eye-show');
-		var hide   = btn.querySelector('.bam-eye-hide');
+		var targetId = btn.getAttribute('data-target') || 'bam_password';
+		var input    = document.getElementById(targetId);
+		var show     = btn.querySelector('.bam-eye-show');
+		var hide     = btn.querySelector('.bam-eye-hide');
+		if (!input) return;
 		if (input.type === 'password') {
 			input.type = 'text';
-			show.style.display = 'none';
-			hide.style.display = '';
+			if (show) show.style.display = 'none';
+			if (hide) hide.style.display = '';
 		} else {
 			input.type = 'password';
-			show.style.display = '';
-			hide.style.display = 'none';
+			if (show) show.style.display = '';
+			if (hide) hide.style.display = 'none';
 		}
 	});
 }());

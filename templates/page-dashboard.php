@@ -295,7 +295,7 @@ return add_query_arg( 'bam_section', $section_slug, $base );
 </td>
 <td><?php echo esc_html( $patient->usuario ); ?></td>
 <td><?php echo esc_html( $patient->correo ); ?></td>
-<td><?php echo $patient->guia_asignada ? esc_html( $patient->guia_asignada ) : '<span style="color:#94a3b8">—</span>'; ?></td>
+<td><?php echo $patient->guia_asignada ? esc_html( $patient->guia_asignada ) : '—'; ?></td>
 <td><?php echo esc_html( date_i18n( get_option( 'date_format' ), strtotime( $patient->fecha_registro ) ) ); ?></td>
 <td>
 <span class="bam-badge <?php echo $patient->estado ? 'bam-badge-success' : 'bam-badge-inactive'; ?>">
@@ -519,7 +519,7 @@ $color = $dist_colors[ $gi % count( $dist_colors ) ];
 <div class="bam-field">
 <label class="bam-label" for="bam_new_password"><?php esc_html_e( 'Nueva Contraseña', 'beforeaftermycare' ); ?></label>
 <div class="bam-input-password-wrapper">
-<input class="bam-input" type="password" id="bam_new_password" name="bam_new_password" autocomplete="new-password" required minlength="6">
+<input class="bam-input" type="password" id="bam_new_password" name="bam_new_password" autocomplete="new-password" required minlength="8">
 <button type="button" class="bam-toggle-pass" data-target="bam_new_password" aria-label="<?php esc_attr_e( 'Mostrar / ocultar contraseña', 'beforeaftermycare' ); ?>">
 <svg class="bam-eye-show" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
 <svg class="bam-eye-hide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -528,7 +528,7 @@ $color = $dist_colors[ $gi % count( $dist_colors ) ];
 </div>
 <div class="bam-field">
 <label class="bam-label" for="bam_new_password2"><?php esc_html_e( 'Confirmar Contraseña', 'beforeaftermycare' ); ?></label>
-<input class="bam-input" type="password" id="bam_new_password2" name="bam_new_password2" autocomplete="new-password" required minlength="6">
+<input class="bam-input" type="password" id="bam_new_password2" name="bam_new_password2" autocomplete="new-password" required minlength="8">
 </div>
 <button type="submit" name="bam_front_change_pass_submit" class="bam-btn bam-btn-primary" style="width:100%;">
 <?php esc_html_e( 'Actualizar Contraseña', 'beforeaftermycare' ); ?>
@@ -625,8 +625,8 @@ $edit_url   = add_query_arg( array( 'bam_edit' => $patient->id, 'bam_section' =>
 </td>
 <td><?php echo esc_html( $patient->usuario ); ?></td>
 <td><?php echo esc_html( $patient->correo ); ?></td>
-<td><?php echo $patient->telefono ? esc_html( $patient->telefono ) : '<span style="color:#94a3b8">—</span>'; ?></td>
-<td><?php echo $patient->guia_asignada ? esc_html( $patient->guia_asignada ) : '<span style="color:#94a3b8">—</span>'; ?></td>
+<td><?php echo $patient->telefono ? esc_html( $patient->telefono ) : '—'; ?></td>
+<td><?php echo $patient->guia_asignada ? esc_html( $patient->guia_asignada ) : '—'; ?></td>
 <td><?php echo esc_html( date_i18n( get_option( 'date_format' ), strtotime( $patient->fecha_registro ) ) ); ?></td>
 <td>
 <span class="bam-badge <?php echo $patient->estado ? 'bam-badge-success' : 'bam-badge-inactive'; ?>">

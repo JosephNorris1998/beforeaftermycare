@@ -131,7 +131,7 @@ class BAM_Frontend_Dashboard {
 		}
 
 		$username = isset( $_POST['bam_username'] ) ? sanitize_user( wp_unslash( $_POST['bam_username'] ) ) : '';
-		$password = isset( $_POST['bam_password'] ) ? wp_unslash( $_POST['bam_password'] ) : '';
+		$password = isset( $_POST['bam_password'] ) ? $_POST['bam_password'] : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash
 
 		$user = wp_signon( array(
 			'user_login'    => $username,
@@ -279,8 +279,8 @@ class BAM_Frontend_Dashboard {
 			wp_die( esc_html__( 'Acción no autorizada.', 'beforeaftermycare' ) );
 		}
 
-		$new_pass  = isset( $_POST['bam_new_password'] )     ? wp_unslash( $_POST['bam_new_password'] )     : '';
-		$new_pass2 = isset( $_POST['bam_new_password2'] )    ? wp_unslash( $_POST['bam_new_password2'] )    : '';
+		$new_pass  = isset( $_POST['bam_new_password'] )  ? $_POST['bam_new_password']  : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+		$new_pass2 = isset( $_POST['bam_new_password2'] ) ? $_POST['bam_new_password2'] : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized,WordPress.Security.ValidatedSanitizedInput.MissingUnslash
 
 		$dashboard_url = home_url( '/' . self::PAGE_SLUG . '/' );
 
