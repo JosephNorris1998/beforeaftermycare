@@ -238,4 +238,42 @@ class BAM_Database {
 		$table = $wpdb->prefix . self::TABLE_PATIENTS;
 		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE fecha_registro >= DATE_SUB(NOW(), INTERVAL 30 DAY)" );
 	}
+
+	/**
+	 * Get monthly patient registrations for the last 12 months.
+	 *
+	 * @return array Array of objects with `month` (YYYY-MM) and `count`.
+	 */
+	public static function get_monthly_registrations() {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_PATIENTS;
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return $wpdb->get_results(
+			"SELECT DATE_FORMAT(fecha_registro, '%Y-%m') as month, COUNT(*) as count
+			 FROM {$table}
+			 WHERE fecha_registro >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+			 GROUP BY month
+			 ORDER BY month ASC"
+		) ?: array();
+		// phpcs:enable
+	}
+
+	/**
+	 * Get distribution of patients by assigned guide.
+	 *
+	 * @return array Array of objects with `guia` and `count`.
+	 */
+	public static function get_guide_distribution() {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_PATIENTS;
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return $wpdb->get_results(
+			"SELECT COALESCE(NULLIF(guia_asignada, ''), 'Sin Guía') as guia, COUNT(*) as count
+			 FROM {$table}
+			 GROUP BY guia_asignada
+			 ORDER BY count DESC
+			 LIMIT 10"
+		) ?: array();
+		// phpcs:enable
+	}
 }

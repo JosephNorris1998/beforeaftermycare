@@ -38,6 +38,7 @@ function bam_activate() {
 	BAM_Database::install();
 	BAM_Registration::create_page();
 	BAM_Frontend_Dashboard::create_page();
+	BAM_Frontend_Dashboard::create_login_page();
 	flush_rewrite_rules();
 }
 
