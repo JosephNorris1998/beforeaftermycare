@@ -38,9 +38,13 @@ class BAM_Reminder {
 	/** WP-Cron hook for single patient reminders. */
 	const CRON_HOOK_SINGLE = 'bam_send_single_reminder';
 
+	/** WP-Cron hook for single reminder-record reminders. */
+	const CRON_HOOK_REMINDER_RECORD = 'bam_send_reminder_record';
+
 	private function __construct() {
-		add_action( self::CRON_HOOK,        array( $this, 'check_reminders' ) );
-		add_action( self::CRON_HOOK_SINGLE, array( $this, 'send_single_reminder' ), 10, 1 );
+		add_action( self::CRON_HOOK,               array( $this, 'check_reminders' ) );
+		add_action( self::CRON_HOOK_SINGLE,         array( $this, 'send_single_reminder' ), 10, 1 );
+		add_action( self::CRON_HOOK_REMINDER_RECORD, array( $this, 'send_single_reminder_record' ), 10, 1 );
 		add_filter( 'wp_mail_from',      array( $this, 'mail_from' ) );
 		add_filter( 'wp_mail_from_name', array( $this, 'mail_from_name' ) );
 		add_shortcode( 'bam_recordatorio', array( $this, 'render_widget' ) );
@@ -118,7 +122,8 @@ class BAM_Reminder {
 	/**
 	 * Process POST submission of the [bam_recordatorio] appointment form.
 	 * Hooked to 'init' so headers can still be sent.
-	 * Works for any visitor (logged-in or guest) – no pre-existing patient record required.
+	 * Works for any visitor (logged-in or guest).
+	 * Saves a reminder record to bam_reminder_records (NOT patients table).
 	 */
 	public function handle_reminder_form() {
 		if ( ! isset( $_POST['bam_recordatorio_submit'] ) ) {
@@ -132,14 +137,15 @@ class BAM_Reminder {
 		}
 
 		// Sanitize inputs.
-		$nombre          = sanitize_text_field( wp_unslash( $_POST['bam_nombre_form']    ?? '' ) );
-		$correo          = sanitize_email( wp_unslash( $_POST['bam_correo_form']         ?? '' ) );
-		$procedimiento   = sanitize_text_field( wp_unslash( $_POST['bam_procedimiento']  ?? '' ) );
-		$fecha_datetime  = sanitize_text_field( wp_unslash( $_POST['bam_fecha_datetime'] ?? '' ) );
-		$confirmacion    = isset( $_POST['bam_confirmacion'] ) ? (bool) $_POST['bam_confirmacion'] : false;
+		$nombre         = sanitize_text_field( wp_unslash( $_POST['bam_nombre_form']    ?? '' ) );
+		$correo         = sanitize_email( wp_unslash( $_POST['bam_correo_form']         ?? '' ) );
+		$procedimiento  = sanitize_text_field( wp_unslash( $_POST['bam_procedimiento']  ?? '' ) );
+		$fecha_datetime = sanitize_text_field( wp_unslash( $_POST['bam_fecha_datetime'] ?? '' ) );
+		$confirmacion   = isset( $_POST['bam_confirmacion'] ) ? (bool) $_POST['bam_confirmacion'] : false;
+		// Page URL passed from the hidden form field for reliable redirect.
+		$page_url       = isset( $_POST['bam_page_url'] ) ? esc_url_raw( wp_unslash( $_POST['bam_page_url'] ) ) : '';
 
 		// Use the email as the transient key for errors (works for guests too).
-		// Generate a random suffix so that different guest sessions don't share the same key.
 		$uid          = get_current_user_id(); // 0 for guests.
 		$error_suffix = $uid ? (string) $uid : bin2hex( random_bytes( 8 ) );
 		$error_key    = 'bam_reminder_errors_' . $error_suffix;
@@ -163,97 +169,61 @@ class BAM_Reminder {
 		if ( empty( $fecha_datetime ) ) {
 			$errors[] = __( 'La fecha y hora del procedimiento son requeridas.', 'beforeaftermycare' );
 		} else {
-			// Parse YYYY-MM-DDTHH:MM (native datetime-local format).
-			$dt = DateTime::createFromFormat( 'Y-m-d\TH:i', $fecha_datetime );
+			// Parse YYYY-MM-DDTHH:MM (native datetime-local format) in WP timezone.
+			$wp_tz = wp_timezone();
+			$dt    = DateTime::createFromFormat( 'Y-m-d\TH:i', $fecha_datetime, $wp_tz );
 			if ( ! $dt ) {
 				$errors[] = __( 'El formato de fecha u hora no es válido.', 'beforeaftermycare' );
 			} else {
 				$ts = $dt->getTimestamp();
-				if ( $ts <= current_time( 'timestamp', true ) ) {
+				if ( $ts <= time() ) {
 					$errors[] = __( 'La fecha del procedimiento debe ser una fecha futura.', 'beforeaftermycare' );
 					$ts       = 0;
 				}
 			}
 		}
 
+		$base_url = $page_url ?: wp_get_referer() ?: home_url();
+
 		if ( ! empty( $errors ) ) {
 			set_transient( $error_key, $errors, 120 );
-			// Also store by uid if logged in for backwards compatibility.
 			if ( $uid ) {
 				set_transient( 'bam_reminder_errors_' . $uid, $errors, 120 );
 			}
-			$referer = wp_get_referer();
-			wp_safe_redirect( $referer ?: home_url() );
+			wp_safe_redirect( $base_url );
 			exit;
 		}
 
 		$fecha_mysql   = gmdate( 'Y-m-d H:i:s', $ts );
 		$procedimiento = $procedimiento ?: __( 'Colonoscopia', 'beforeaftermycare' );
 
-		// Look up existing patient by email, then by logged-in WP user.
-		$patient = BAM_Database::get_patient_by_email( $correo );
-		if ( ! $patient && $uid ) {
-			$patient = BAM_Database::get_patient_by_wp_user_id( $uid );
-		}
+		// Save to reminder records table (not patients table).
+		$new_id = BAM_Database::insert_reminder( array(
+			'nombre'               => $nombre,
+			'correo'               => $correo,
+			'procedimiento'        => $procedimiento,
+			'fecha_procedimiento'  => $fecha_mysql,
+			'recordatorio_horas'   => self::DEFAULT_HOURS,
+			'recordatorio_enviado' => 0,
+		) );
 
-		if ( $patient ) {
-			// Update existing patient record.
-			BAM_Database::update_patient( (int) $patient->id, array(
-				'nombre'               => $nombre,
-				'procedimiento'        => $procedimiento,
-				'fecha_procedimiento'  => $fecha_mysql,
-				'recordatorio_horas'   => self::DEFAULT_HOURS,
-				'recordatorio_enviado' => 0,
-			) );
-			$patient = BAM_Database::get_patient( (int) $patient->id );
-		} else {
-			// Create a new patient record.
-			$usuario_base = sanitize_user( strstr( $correo, '@', true ), true );
-			if ( empty( $usuario_base ) ) {
-				$usuario_base = 'paciente';
-			}
-			$usuario  = $usuario_base;
-			$suffix   = 1;
-			$max_iter = 100;
-			while ( BAM_Database::usuario_exists( $usuario ) && $suffix <= $max_iter ) {
-				$usuario = $usuario_base . $suffix;
-				$suffix++;
-			}
-			if ( $suffix > $max_iter ) {
-				$usuario = $usuario_base . '_' . bin2hex( random_bytes( 4 ) );
-			}
-
-			$new_id = BAM_Database::insert_patient( array(
-				'wp_user_id'           => $uid,
-				'nombre'               => $nombre,
-				'usuario'              => $usuario,
-				'correo'               => $correo,
-				'procedimiento'        => $procedimiento,
-				'fecha_procedimiento'  => $fecha_mysql,
-				'recordatorio_horas'   => self::DEFAULT_HOURS,
-				'recordatorio_enviado' => 0,
-			) );
-
-			$patient = $new_id ? BAM_Database::get_patient( $new_id ) : null;
-		}
+		$reminder = $new_id ? BAM_Database::get_reminder( $new_id ) : null;
 
 		// Send immediate confirmation email.
-		if ( $patient ) {
-			$this->send_confirmation_email( $patient );
+		if ( $reminder ) {
+			$this->send_confirmation_email( $reminder );
 		}
 
 		// Schedule a single-event reminder at exactly 24 hours before the procedure.
-		if ( $patient && $ts > 0 ) {
+		if ( $new_id && $ts > 0 ) {
 			$reminder_time = $ts - ( self::DEFAULT_HOURS * HOUR_IN_SECONDS );
-			// Clear any previously scheduled single reminder for this patient.
-			wp_clear_scheduled_hook( self::CRON_HOOK_SINGLE, array( (int) $patient->id ) );
+			wp_clear_scheduled_hook( self::CRON_HOOK_REMINDER_RECORD, array( (int) $new_id ) );
 			if ( $reminder_time > time() ) {
-				wp_schedule_single_event( $reminder_time, self::CRON_HOOK_SINGLE, array( (int) $patient->id ) );
+				wp_schedule_single_event( $reminder_time, self::CRON_HOOK_REMINDER_RECORD, array( (int) $new_id ) );
 			}
 		}
 
-		$referer  = wp_get_referer();
-		$redirect = add_query_arg( 'bam_reminder_saved', '1', $referer ?: home_url() );
+		$redirect = add_query_arg( 'bam_reminder_saved', '1', $base_url );
 		wp_safe_redirect( $redirect );
 		exit;
 	}
@@ -293,11 +263,11 @@ class BAM_Reminder {
 		$is_future        = false;
 
 		if ( $patient && ! empty( $patient->fecha_procedimiento ) ) {
-			$ts = strtotime( $patient->fecha_procedimiento );
-			// Guard against MySQL zero-date (0000-00-00) which produces an invalid/negative timestamp.
+			$ts = strtotime( $patient->fecha_procedimiento . ' UTC' );
+			// Guard against invalid timestamps.
 			if ( $ts && $ts > 0 ) {
-				$prefill_datetime = gmdate( 'Y-m-d\TH:i', $ts );
-				$fecha_fmt        = date_i18n( 'j \d\e F \d\e Y \a \l\a\s H:i', $ts );
+				$prefill_datetime = wp_date( 'Y-m-d\TH:i', $ts );
+				$fecha_fmt        = wp_date( 'j \d\e F \d\e Y \a \l\a\s H:i', $ts );
 				$is_future        = $ts > time();
 			}
 		}
@@ -330,12 +300,12 @@ class BAM_Reminder {
 	</div>
 
 	<?php if ( $saved ) : ?>
-	<!-- Success notice – form is hidden after successful registration -->
+	<!-- Success notice – shown above form after successful registration -->
 	<div class="bam-reminder-notice bam-reminder-notice-success bam-reminder-notice-standalone" role="status">
 		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-		<span><?php esc_html_e( 'Recordatorio programado exitosamente', 'beforeaftermycare' ); ?></span>
+		<span><?php esc_html_e( '¡Envío Exitoso! Tu recordatorio ha sido programado. Recibirás un correo de confirmación y un recordatorio automático 24 horas antes de tu procedimiento.', 'beforeaftermycare' ); ?></span>
 	</div>
-	<?php else : ?>
+	<?php endif; ?>
 
 	<?php if ( ! empty( $errors ) ) : ?>
 	<!-- Error notice -->
@@ -377,6 +347,7 @@ class BAM_Reminder {
 
 		<form class="bam-reminder-form" id="<?php echo esc_attr( $form_id ); ?>" method="post" action="">
 			<?php wp_nonce_field( self::REMINDER_NONCE_ACTION, 'bam_recordatorio_nonce' ); ?>
+			<input type="hidden" name="bam_page_url" value="<?php echo esc_url( get_permalink() ?: home_url() ); ?>">
 
 			<!-- Confirmation checkbox -->
 			<div class="bam-reminder-field bam-field-checkbox">
@@ -403,7 +374,7 @@ class BAM_Reminder {
 						type="text"
 						id="bam_nombre_form_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
 						name="bam_nombre_form"
-						value="<?php echo esc_attr( $prefill_name ); ?>"
+						value="<?php echo esc_attr( $saved ? '' : $prefill_name ); ?>"
 						placeholder="<?php esc_attr_e( 'Ej: Juan Pérez', 'beforeaftermycare' ); ?>"
 						required
 					>
@@ -419,7 +390,7 @@ class BAM_Reminder {
 						type="email"
 						id="bam_correo_form_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
 						name="bam_correo_form"
-						value="<?php echo esc_attr( $prefill_email ); ?>"
+						value="<?php echo esc_attr( $saved ? '' : $prefill_email ); ?>"
 						placeholder="correo@ejemplo.com"
 						required
 					>
@@ -438,7 +409,7 @@ class BAM_Reminder {
 						type="datetime-local"
 						id="bam_fecha_datetime_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
 						name="bam_fecha_datetime"
-						value="<?php echo esc_attr( $prefill_datetime ); ?>"
+						value="<?php echo esc_attr( $saved ? '' : $prefill_datetime ); ?>"
 						min="<?php echo esc_attr( current_time( 'Y-m-d\TH:i' ) ); ?>"
 						required
 					>
@@ -453,7 +424,7 @@ class BAM_Reminder {
 						id="bam_procedimiento_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
 						name="bam_procedimiento"
 					>
-						<option value="Colonoscopia" <?php selected( $prefill_proc, 'Colonoscopia' ); ?>>
+						<option value="Colonoscopia" <?php selected( $saved ? 'Colonoscopia' : $prefill_proc, 'Colonoscopia' ); ?>>
 							<?php esc_html_e( 'Colonoscopia', 'beforeaftermycare' ); ?>
 						</option>
 					</select>
@@ -471,8 +442,6 @@ class BAM_Reminder {
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
 		<?php esc_html_e( 'Al registrar tu cita recibirás un correo de confirmación y un recordatorio automático 24 horas antes de tu procedimiento.', 'beforeaftermycare' ); ?>
 	</div>
-
-	<?php endif; // $saved ?>
 
 </div>
 		<?php
@@ -516,12 +485,35 @@ class BAM_Reminder {
 	 * Acts as a safety net for reminders that may have been missed by the single event.
 	 */
 	public function check_reminders() {
+		// Process patient-based reminders (admin-created patients with procedure dates).
 		$patients = BAM_Database::get_patients_for_reminder();
-
 		foreach ( $patients as $patient ) {
 			if ( $this->send_reminder_email( $patient ) ) {
 				BAM_Database::mark_reminder_sent( (int) $patient->id );
 			}
+		}
+
+		// Process reminder records (frontend form submissions).
+		$reminders = BAM_Database::get_reminders_for_sending();
+		foreach ( $reminders as $reminder ) {
+			if ( $this->send_reminder_email( $reminder ) ) {
+				BAM_Database::mark_reminder_record_sent( (int) $reminder->id );
+			}
+		}
+	}
+
+	/**
+	 * Single-event cron callback: send the reminder for one specific reminder record.
+	 *
+	 * @param int $reminder_id Reminder record ID.
+	 */
+	public function send_single_reminder_record( $reminder_id ) {
+		$reminder = BAM_Database::get_reminder( (int) $reminder_id );
+		if ( ! $reminder || $reminder->recordatorio_enviado ) {
+			return;
+		}
+		if ( $this->send_reminder_email( $reminder ) ) {
+			BAM_Database::mark_reminder_record_sent( (int) $reminder->id );
 		}
 	}
 
@@ -565,10 +557,14 @@ class BAM_Reminder {
 		$nombre    = esc_html( $patient->nombre );
 		$proc_html = esc_html( $procedimiento );
 
-		// Format procedure date.
+		// Format procedure date (stored as UTC in DB).
 		if ( ! empty( $patient->fecha_procedimiento ) ) {
-			$ts        = strtotime( $patient->fecha_procedimiento );
-			$fecha_fmt = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $ts );
+			$ts = strtotime( $patient->fecha_procedimiento . ' UTC' );
+			if ( $ts && $ts > 0 ) {
+				$fecha_fmt = wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $ts );
+			} else {
+				$fecha_fmt = __( 'Fecha por confirmar', 'beforeaftermycare' );
+			}
 		} else {
 			$fecha_fmt = __( 'Fecha por confirmar', 'beforeaftermycare' );
 		}
@@ -754,10 +750,14 @@ class BAM_Reminder {
 
 		$recordatorio_horas = isset( $patient->recordatorio_horas ) ? (int) $patient->recordatorio_horas : self::DEFAULT_HOURS;
 
-		// Format procedure date.
+		// Format procedure date (stored as UTC in DB).
 		if ( ! empty( $patient->fecha_procedimiento ) ) {
-			$ts        = strtotime( $patient->fecha_procedimiento );
-			$fecha_fmt = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $ts );
+			$ts = strtotime( $patient->fecha_procedimiento . ' UTC' );
+			if ( $ts && $ts > 0 ) {
+				$fecha_fmt = wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $ts );
+			} else {
+				$fecha_fmt = __( 'Fecha por confirmar', 'beforeaftermycare' );
+			}
 		} else {
 			$fecha_fmt = __( 'Fecha por confirmar', 'beforeaftermycare' );
 		}

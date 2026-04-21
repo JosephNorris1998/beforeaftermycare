@@ -33,10 +33,11 @@ class BAM_Admin {
 		add_action( 'admin_menu',            array( $this, 'register_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_init',            array( $this, 'handle_actions' ) );
-		add_action( 'admin_post_bam_clear_cache',          array( $this, 'handle_clear_cache' ) );
-		add_action( 'admin_post_bam_save_survey_email',    array( $this, 'handle_save_survey_email' ) );
-		add_action( 'admin_post_bam_save_reminder_hours',  array( $this, 'handle_save_reminder_hours' ) );
-		add_action( 'admin_post_bam_send_manual_reminder', array( $this, 'handle_send_manual_reminder' ) );
+		add_action( 'admin_post_bam_clear_cache',             array( $this, 'handle_clear_cache' ) );
+		add_action( 'admin_post_bam_save_survey_email',       array( $this, 'handle_save_survey_email' ) );
+		add_action( 'admin_post_bam_save_reminder_hours',     array( $this, 'handle_save_reminder_hours' ) );
+		add_action( 'admin_post_bam_send_manual_reminder',    array( $this, 'handle_send_manual_reminder' ) );
+		add_action( 'admin_post_bam_delete_reminder_record',  array( $this, 'handle_delete_reminder_record' ) );
 	}
 
 	// ── Menu ──────────────────────────────────────────────────────────────────
@@ -155,8 +156,9 @@ class BAM_Admin {
 			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 			'nonce'   => wp_create_nonce( 'bam_admin_nonce' ),
 			'i18n'    => array(
-				'confirmDelete'   => __( '¿Eliminar este paciente? Esta acción no se puede deshacer.', 'beforeaftermycare' ),
-				'confirmToggle'   => __( '¿Cambiar el estado de este paciente?', 'beforeaftermycare' ),
+				'confirmDelete'         => __( '¿Eliminar este paciente? Esta acción no se puede deshacer.', 'beforeaftermycare' ),
+				'confirmToggle'         => __( '¿Cambiar el estado de este paciente?', 'beforeaftermycare' ),
+				'confirmDeleteReminder' => __( '¿Eliminar este recordatorio? Esta acción no se puede deshacer.', 'beforeaftermycare' ),
 			),
 		) );
 	}
@@ -378,10 +380,10 @@ class BAM_Admin {
 	public function page_reminders() {
 		$msg            = isset( $_GET['bam_reminder_msg'] ) ? sanitize_key( $_GET['bam_reminder_msg'] ) : '';
 		$reminder_hours = (int) get_option( 'bam_reminder_hours', BAM_Reminder::DEFAULT_HOURS );
-		$reminder_stats = BAM_Database::get_reminder_stats();
+		$reminder_stats = BAM_Database::get_reminder_record_stats();
 		$per_page       = 20;
 		$paged          = isset( $_GET['paged'] ) ? absint( $_GET['paged'] ) : 1;
-		$rem_result     = BAM_Database::get_patients_with_reminders( $per_page, $paged );
+		$rem_result     = BAM_Database::get_reminders( $per_page, $paged );
 		$rem_patients   = $rem_result['items'];
 		$rem_total      = $rem_result['total'];
 		$rem_num_pages  = (int) ceil( $rem_total / $per_page );
@@ -447,6 +449,28 @@ class BAM_Admin {
 
 		$msg = $sent ? 'reminder_sent' : 'reminder_error';
 		wp_redirect( add_query_arg( array( 'page' => 'bam-reminders', 'bam_reminder_msg' => $msg ), admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	/**
+	 * Handle deleting a single reminder record.
+	 */
+	public function handle_delete_reminder_record() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'No tienes permiso para realizar esta acción.', 'beforeaftermycare' ) );
+		}
+
+		if ( ! isset( $_POST['bam_delete_reminder_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['bam_delete_reminder_nonce'] ) ), 'bam_delete_reminder_record' ) ) {
+			wp_die( esc_html__( 'Acción no autorizada.', 'beforeaftermycare' ) );
+		}
+
+		$reminder_id = isset( $_POST['bam_reminder_id'] ) ? absint( $_POST['bam_reminder_id'] ) : 0;
+
+		if ( $reminder_id ) {
+			BAM_Database::delete_reminder( $reminder_id );
+		}
+
+		wp_redirect( add_query_arg( array( 'page' => 'bam-reminders', 'bam_reminder_msg' => 'reminder_deleted' ), admin_url( 'admin.php' ) ) );
 		exit;
 	}
 }

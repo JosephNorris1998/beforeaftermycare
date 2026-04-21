@@ -65,6 +65,10 @@ $reminder_options = array(
 			<div class="bam-notice bam-notice-success" role="status">
 				<?php esc_html_e( 'Recordatorio enviado correctamente al correo del paciente.', 'beforeaftermycare' ); ?>
 			</div>
+		<?php elseif ( 'reminder_deleted' === $msg ) : ?>
+			<div class="bam-notice bam-notice-success" role="status">
+				<?php esc_html_e( 'Registro de recordatorio eliminado correctamente.', 'beforeaftermycare' ); ?>
+			</div>
 		<?php elseif ( 'reminder_error' === $msg ) : ?>
 			<div class="bam-notice bam-notice-error" role="alert">
 				<?php esc_html_e( 'No se pudo enviar el recordatorio. Verifica los datos e inténtalo de nuevo.', 'beforeaftermycare' ); ?>
@@ -274,7 +278,7 @@ $reminder_options = array(
 					<?php esc_html_e( 'Con Fecha Asignada', 'beforeaftermycare' ); ?>
 				</p>
 				<p style="margin:0;font-size:2rem;font-weight:800;color:#0077b6;"><?php echo esc_html( $reminder_stats['total_con_fecha'] ); ?></p>
-				<p style="margin:4px 0 0;font-size:.75rem;color:#94a3b8;"><?php esc_html_e( 'pacientes con procedimiento agendado', 'beforeaftermycare' ); ?></p>
+				<p style="margin:4px 0 0;font-size:.75rem;color:#94a3b8;"><?php esc_html_e( 'recordatorios con fecha de procedimiento', 'beforeaftermycare' ); ?></p>
 			</div>
 
 			<div class="bam-card" style="padding:20px 24px;border-top:3px solid #16a34a;">
@@ -298,12 +302,15 @@ $reminder_options = array(
 					<?php esc_html_e( 'Sin Fecha', 'beforeaftermycare' ); ?>
 				</p>
 				<p style="margin:0;font-size:2rem;font-weight:800;color:#94a3b8;"><?php echo esc_html( $reminder_stats['sin_fecha'] ); ?></p>
-				<p style="margin:4px 0 0;font-size:.75rem;color:#94a3b8;"><?php esc_html_e( 'pacientes activos sin procedimiento asignado', 'beforeaftermycare' ); ?></p>
+				<p style="margin:4px 0 0;font-size:.75rem;color:#94a3b8;"><?php esc_html_e( 'registros sin fecha de procedimiento', 'beforeaftermycare' ); ?></p>
 			</div>
 
 		</div>
 
-		<!-- ── Lista de Registros de Recordatorios ────────────────────────── -->
+		<!-- ── Historial de Recordatorios ────────────────────────── -->
+		<h2 style="margin:36px 0 16px;font-size:1.1rem;font-weight:700;color:#1e293b;">
+			<?php esc_html_e( 'Historial de Recordatorios', 'beforeaftermycare' ); ?>
+		</h2>
 		<div class="bam-card">
 			<div class="bam-card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
 				<h2 class="bam-card-title">
@@ -324,27 +331,28 @@ $reminder_options = array(
 			<?php if ( empty( $rem_patients ) ) : ?>
 				<div style="padding:40px 24px;text-align:center;color:#94a3b8;">
 					<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:.4;" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-					<p style="margin:0;font-size:.9rem;"><?php esc_html_e( 'No hay pacientes con fecha de procedimiento asignada todavía.', 'beforeaftermycare' ); ?></p>
+					<p style="margin:0;font-size:.9rem;"><?php esc_html_e( 'No hay recordatorios registrados todavía.', 'beforeaftermycare' ); ?></p>
 				</div>
 			<?php else : ?>
 				<div style="overflow-x:auto;">
 					<table class="bam-table" style="width:100%;border-collapse:collapse;">
 						<thead>
 							<tr>
-								<th style="text-align:left;padding:12px 16px;font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0;white-space:nowrap;"><?php esc_html_e( 'Paciente', 'beforeaftermycare' ); ?></th>
+								<th style="text-align:left;padding:12px 16px;font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0;white-space:nowrap;"><?php esc_html_e( 'Nombre', 'beforeaftermycare' ); ?></th>
 								<th style="text-align:left;padding:12px 16px;font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0;white-space:nowrap;"><?php esc_html_e( 'Correo', 'beforeaftermycare' ); ?></th>
 								<th style="text-align:left;padding:12px 16px;font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0;white-space:nowrap;"><?php esc_html_e( 'Procedimiento', 'beforeaftermycare' ); ?></th>
 								<th style="text-align:left;padding:12px 16px;font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0;white-space:nowrap;"><?php esc_html_e( 'Fecha Procedimiento', 'beforeaftermycare' ); ?></th>
-								<th style="text-align:center;padding:12px 16px;font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0;white-space:nowrap;"><?php esc_html_e( 'Aviso (h)', 'beforeaftermycare' ); ?></th>
+								<th style="text-align:left;padding:12px 16px;font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0;white-space:nowrap;"><?php esc_html_e( 'Fecha Registro', 'beforeaftermycare' ); ?></th>
 								<th style="text-align:center;padding:12px 16px;font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0;white-space:nowrap;"><?php esc_html_e( 'Estado', 'beforeaftermycare' ); ?></th>
+								<th style="text-align:center;padding:12px 16px;font-size:.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #e2e8f0;white-space:nowrap;"><?php esc_html_e( 'Acciones', 'beforeaftermycare' ); ?></th>
 							</tr>
 						</thead>
 						<tbody>
 							<?php foreach ( $rem_patients as $rp ) : ?>
 								<?php
-								$is_sent   = (bool) $rp->recordatorio_enviado;
-								$fecha_dt  = $rp->fecha_procedimiento ? strtotime( $rp->fecha_procedimiento ) : 0;
-								$is_past   = $fecha_dt && $fecha_dt < time();
+								$is_sent  = (bool) $rp->recordatorio_enviado;
+								$fecha_dt = ! empty( $rp->fecha_procedimiento ) ? strtotime( $rp->fecha_procedimiento . ' UTC' ) : 0;
+								$is_past  = $fecha_dt && $fecha_dt < time();
 								if ( $is_sent ) {
 									$badge_bg    = '#dcfce7';
 									$badge_color = '#16a34a';
@@ -358,12 +366,11 @@ $reminder_options = array(
 									$badge_color = '#a16207';
 									$badge_text  = __( 'Pendiente', 'beforeaftermycare' );
 								}
+								$reg_ts = ! empty( $rp->fecha_registro ) ? strtotime( $rp->fecha_registro . ' UTC' ) : 0;
 								?>
 								<tr style="border-bottom:1px solid #f1f5f9;">
 									<td style="padding:14px 16px;font-size:.875rem;color:#1e293b;font-weight:600;">
-										<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'bam-patient-detail', 'bam_id' => $rp->id ), admin_url( 'admin.php' ) ) ); ?>" style="color:#0077b6;text-decoration:none;">
-											<?php echo esc_html( $rp->nombre ); ?>
-										</a>
+										<?php echo esc_html( $rp->nombre ); ?>
 									</td>
 									<td style="padding:14px 16px;font-size:.875rem;color:#475569;"><?php echo esc_html( $rp->correo ); ?></td>
 									<td style="padding:14px 16px;font-size:.875rem;color:#475569;"><?php echo esc_html( $rp->procedimiento ?: '—' ); ?></td>
@@ -376,11 +383,33 @@ $reminder_options = array(
 										}
 										?>
 									</td>
-									<td style="padding:14px 16px;font-size:.875rem;color:#475569;text-align:center;"><?php echo esc_html( $rp->recordatorio_horas ); ?>h</td>
+									<td style="padding:14px 16px;font-size:.875rem;color:#475569;white-space:nowrap;">
+										<?php
+										if ( $reg_ts ) {
+											echo esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $reg_ts ) );
+										} else {
+											echo '—';
+										}
+										?>
+									</td>
 									<td style="padding:14px 16px;text-align:center;">
 										<span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:.75rem;font-weight:700;background:<?php echo esc_attr( $badge_bg ); ?>;color:<?php echo esc_attr( $badge_color ); ?>;">
 											<?php echo esc_html( $badge_text ); ?>
 										</span>
+									</td>
+									<td style="padding:14px 16px;text-align:center;">
+										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;">
+											<?php wp_nonce_field( 'bam_delete_reminder_record', 'bam_delete_reminder_nonce' ); ?>
+											<input type="hidden" name="action" value="bam_delete_reminder_record">
+											<input type="hidden" name="bam_reminder_id" value="<?php echo esc_attr( $rp->id ); ?>">
+											<button
+												type="submit"
+												class="bam-btn bam-confirm-delete-reminder"
+												style="padding:5px 12px;font-size:.8rem;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-weight:600;"
+											>
+												<?php esc_html_e( 'Eliminar', 'beforeaftermycare' ); ?>
+											</button>
+										</form>
 									</td>
 								</tr>
 							<?php endforeach; ?>
