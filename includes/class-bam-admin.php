@@ -376,8 +376,15 @@ class BAM_Admin {
 
 	/** Recordatorios page. */
 	public function page_reminders() {
-		$msg           = isset( $_GET['bam_reminder_msg'] ) ? sanitize_key( $_GET['bam_reminder_msg'] ) : '';
+		$msg            = isset( $_GET['bam_reminder_msg'] ) ? sanitize_key( $_GET['bam_reminder_msg'] ) : '';
 		$reminder_hours = (int) get_option( 'bam_reminder_hours', BAM_Reminder::DEFAULT_HOURS );
+		$reminder_stats = BAM_Database::get_reminder_stats();
+		$per_page       = 20;
+		$paged          = isset( $_GET['paged'] ) ? absint( $_GET['paged'] ) : 1;
+		$rem_result     = BAM_Database::get_patients_with_reminders( $per_page, $paged );
+		$rem_patients   = $rem_result['items'];
+		$rem_total      = $rem_result['total'];
+		$rem_num_pages  = (int) ceil( $rem_total / $per_page );
 		include BAM_PLUGIN_DIR . 'templates/admin-reminders.php';
 	}
 
