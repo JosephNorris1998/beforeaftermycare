@@ -100,27 +100,12 @@ class BAM_Reminder {
 			$ver
 		);
 
-		// jQuery UI Datepicker for the calendar (bundled with WordPress).
-		wp_enqueue_script( 'jquery-ui-datepicker' );
-		// Minimal datepicker styles are included in the plugin's frontend.css.
-
-		// Initialise the datepicker with Spanish locale and DD/MM/YYYY format.
-		wp_add_inline_script(
-			'jquery-ui-datepicker',
-			'jQuery(function($){
-				$(".bam-datepicker").datepicker({
-					dateFormat: "dd/mm/yy",
-					changeMonth: true,
-					changeYear: true,
-					minDate: 0,
-					monthNames: ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"],
-					monthNamesShort: ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"],
-					dayNames: ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"],
-					dayNamesShort: ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"],
-					dayNamesMin: ["Do","Lu","Ma","Mi","Ju","Vi","Sa"],
-					firstDay: 1
-				});
-			});'
+		wp_enqueue_script(
+			'bam-frontend',
+			BAM_PLUGIN_URL . 'assets/js/frontend.js',
+			array(),
+			$ver,
+			true
 		);
 	}
 
@@ -143,12 +128,11 @@ class BAM_Reminder {
 		}
 
 		// Sanitize inputs.
-		$nombre        = sanitize_text_field( wp_unslash( $_POST['bam_nombre_form']  ?? '' ) );
-		$correo        = sanitize_email( wp_unslash( $_POST['bam_correo_form']  ?? '' ) );
-		$procedimiento = sanitize_text_field( wp_unslash( $_POST['bam_procedimiento'] ?? '' ) );
-		$fecha_date    = sanitize_text_field( wp_unslash( $_POST['bam_fecha_date']    ?? '' ) );
-		$fecha_time    = sanitize_text_field( wp_unslash( $_POST['bam_fecha_time']    ?? '' ) );
-		$confirmacion  = isset( $_POST['bam_confirmacion'] ) ? (bool) $_POST['bam_confirmacion'] : false;
+		$nombre          = sanitize_text_field( wp_unslash( $_POST['bam_nombre_form']    ?? '' ) );
+		$correo          = sanitize_email( wp_unslash( $_POST['bam_correo_form']         ?? '' ) );
+		$procedimiento   = sanitize_text_field( wp_unslash( $_POST['bam_procedimiento']  ?? '' ) );
+		$fecha_datetime  = sanitize_text_field( wp_unslash( $_POST['bam_fecha_datetime'] ?? '' ) );
+		$confirmacion    = isset( $_POST['bam_confirmacion'] ) ? (bool) $_POST['bam_confirmacion'] : false;
 
 		// Use the email as the transient key for errors (works for guests too).
 		// Generate a random suffix so that different guest sessions don't share the same key.
@@ -172,11 +156,11 @@ class BAM_Reminder {
 			$errors[] = __( 'Ingresa un correo electrónico válido.', 'beforeaftermycare' );
 		}
 
-		if ( empty( $fecha_date ) || empty( $fecha_time ) ) {
+		if ( empty( $fecha_datetime ) ) {
 			$errors[] = __( 'La fecha y hora del procedimiento son requeridas.', 'beforeaftermycare' );
 		} else {
-			// Parse DD/MM/YYYY HH:MM.
-			$dt = DateTime::createFromFormat( 'd/m/Y H:i', $fecha_date . ' ' . $fecha_time );
+			// Parse YYYY-MM-DDTHH:MM (native datetime-local format).
+			$dt = DateTime::createFromFormat( 'Y-m-d\TH:i', $fecha_datetime );
 			if ( ! $dt ) {
 				$errors[] = __( 'El formato de fecha u hora no es válido.', 'beforeaftermycare' );
 			} else {
@@ -288,18 +272,19 @@ class BAM_Reminder {
 		$prefill_name  = $patient ? $patient->nombre : ( $uid ? wp_get_current_user()->display_name : '' );
 		$prefill_email = $patient ? $patient->correo  : ( $uid ? wp_get_current_user()->user_email    : '' );
 
-		// Pre-fill date/time fields (DD/MM/YYYY and HH:MM).
-		$prefill_date  = '';
-		$prefill_time  = '';
-		$fecha_fmt     = '';
-		$is_future     = false;
+		// Pre-fill date/time field (YYYY-MM-DDTHH:MM for datetime-local input).
+		$prefill_datetime = '';
+		$fecha_fmt        = '';
+		$is_future        = false;
 
 		if ( $patient && ! empty( $patient->fecha_procedimiento ) ) {
-			$ts            = strtotime( $patient->fecha_procedimiento );
-			$prefill_date  = gmdate( 'd/m/Y', $ts );
-			$prefill_time  = gmdate( 'H:i', $ts );
-			$fecha_fmt     = date_i18n( 'j \d\e F \d\e Y \a \l\a\s H:i', $ts );
-			$is_future     = $ts > time();
+			$ts = strtotime( $patient->fecha_procedimiento );
+			// Guard against MySQL zero-date (0000-00-00) which produces an invalid/negative timestamp.
+			if ( $ts && $ts > 0 ) {
+				$prefill_datetime = gmdate( 'Y-m-d\TH:i', $ts );
+				$fecha_fmt        = date_i18n( 'j \d\e F \d\e Y \a \l\a\s H:i', $ts );
+				$is_future        = $ts > time();
+			}
 		}
 
 		$prefill_proc  = $patient && ! empty( $patient->procedimiento ) ? $patient->procedimiento : 'Colonoscopia';
@@ -427,28 +412,19 @@ class BAM_Reminder {
 
 			<!-- Fecha y hora -->
 			<div class="bam-reminder-field">
-				<label>
+				<label for="bam_fecha_datetime_<?php echo esc_attr( $uid ?: 'guest' ); ?>">
 					<?php esc_html_e( 'Fecha y hora:', 'beforeaftermycare' ); ?>
 					<span class="bam-required" aria-hidden="true">*</span>
 				</label>
-				<div class="bam-datetime-row">
-					<input
-						class="bam-input bam-datepicker"
-						type="text"
-						name="bam_fecha_date"
-						value="<?php echo esc_attr( $prefill_date ); ?>"
-						placeholder="DD/MM/AAAA"
-						autocomplete="off"
-						required
-					>
-					<input
-						class="bam-input bam-timepicker"
-						type="time"
-						name="bam_fecha_time"
-						value="<?php echo esc_attr( $prefill_time ); ?>"
-						required
-					>
-				</div>
+				<input
+					class="bam-input bam-datetime-local"
+					type="datetime-local"
+					id="bam_fecha_datetime_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
+					name="bam_fecha_datetime"
+					value="<?php echo esc_attr( $prefill_datetime ); ?>"
+					min="<?php echo esc_attr( current_time( 'Y-m-d\TH:i' ) ); ?>"
+					required
+				>
 			</div>
 
 			<!-- Procedimiento -->
