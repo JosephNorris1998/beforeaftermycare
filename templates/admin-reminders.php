@@ -368,7 +368,13 @@ $reminder_options = array(
 									<td style="padding:14px 16px;font-size:.875rem;color:#475569;"><?php echo esc_html( $rp->correo ); ?></td>
 									<td style="padding:14px 16px;font-size:.875rem;color:#475569;"><?php echo esc_html( $rp->procedimiento ?: '—' ); ?></td>
 									<td style="padding:14px 16px;font-size:.875rem;color:#475569;white-space:nowrap;">
-										<?php echo $fecha_dt ? esc_html( gmdate( 'd/m/Y H:i', $fecha_dt ) ) : '—'; ?>
+										<?php
+										if ( $fecha_dt ) {
+											echo esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $fecha_dt ) );
+										} else {
+											echo '—';
+										}
+										?>
 									</td>
 									<td style="padding:14px 16px;font-size:.875rem;color:#475569;text-align:center;"><?php echo esc_html( $rp->recordatorio_horas ); ?>h</td>
 									<td style="padding:14px 16px;text-align:center;">
