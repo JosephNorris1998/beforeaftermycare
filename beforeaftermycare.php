@@ -3,7 +3,7 @@
  * Plugin Name:       Before After My Care – Guías Médicas
  * Plugin URI:        https://beforeaftermycare.com
  * Description:       Gestión de guías de procesos médicos con registro de pacientes y dashboard de administración.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Author:            Before After My Care
  * Author URI:        https://beforeaftermycare.com
  * Text Domain:       beforeaftermycare
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
-define( 'BAM_VERSION',     '1.0.0' );
+define( 'BAM_VERSION',     '1.0.1' );
 define( 'BAM_PLUGIN_FILE', __FILE__ );
 define( 'BAM_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
 define( 'BAM_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
