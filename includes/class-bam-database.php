@@ -237,6 +237,30 @@ class BAM_Database {
 	}
 
 	/**
+	 * Get a single patient record by email address.
+	 *
+	 * @param string $correo Email address.
+	 * @return object|null
+	 */
+	public static function get_patient_by_email( $correo ) {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_PATIENTS;
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE correo = %s LIMIT 1", $correo ) );
+	}
+
+	/**
+	 * Check whether a username already exists in the patients table.
+	 *
+	 * @param string $usuario Username to check.
+	 * @return bool
+	 */
+	public static function usuario_exists( $usuario ) {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_PATIENTS;
+		return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE usuario = %s LIMIT 1", $usuario ) );
+	}
+
+	/**
 	 *
 	 * @param string $usuario
 	 * @param string $correo
