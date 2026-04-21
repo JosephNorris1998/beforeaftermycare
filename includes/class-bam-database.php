@@ -11,13 +11,16 @@ class BAM_Database {
 
 	/** @var string DB version key used for upgrade checks. */
 	const DB_VERSION_KEY = 'bam_db_version';
-	const DB_VERSION     = '1.4';
+	const DB_VERSION     = '1.5';
 
 	/** @var string Patients table name (without prefix). */
 	const TABLE_PATIENTS = 'bam_patients';
 
 	/** @var string Survey responses table name (without prefix). */
 	const TABLE_SURVEY = 'bam_survey_responses';
+
+	/** @var string Reminder records table name (without prefix). */
+	const TABLE_REMINDERS = 'bam_reminder_records';
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -75,6 +78,23 @@ class BAM_Database {
 			PRIMARY KEY  (id),
 			KEY idx_patient_id (patient_id),
 			KEY idx_fecha_envio (fecha_envio)
+		) {$charset_collate};";
+
+		// Reminder records table.
+		$reminder_table = $wpdb->prefix . self::TABLE_REMINDERS;
+
+		$sql .= "CREATE TABLE {$reminder_table} (
+			id                   BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+			nombre               VARCHAR(200)        NOT NULL,
+			correo               VARCHAR(200)        NOT NULL,
+			procedimiento        VARCHAR(200)                 DEFAULT NULL,
+			fecha_procedimiento  DATETIME                     DEFAULT NULL,
+			recordatorio_horas   SMALLINT UNSIGNED   NOT NULL DEFAULT 24,
+			recordatorio_enviado TINYINT(1)          NOT NULL DEFAULT 0,
+			fecha_registro       DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			KEY idx_correo (correo),
+			KEY idx_fecha_proc (fecha_procedimiento)
 		) {$charset_collate};";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -571,5 +591,165 @@ class BAM_Database {
 	 */
 	public static function reset_reminder( $id ) {
 		return self::update_patient( $id, array( 'recordatorio_enviado' => 0 ) );
+	}
+
+	// ── Reminder Records (frontend form submissions) ───────────────────────────
+
+	/**
+	 * Insert a new reminder record.
+	 *
+	 * @param array $data Keys: nombre, correo, procedimiento, fecha_procedimiento, recordatorio_horas.
+	 * @return int|false Inserted ID or false on error.
+	 */
+	public static function insert_reminder( array $data ) {
+		global $wpdb;
+
+		$defaults = array(
+			'nombre'               => '',
+			'correo'               => '',
+			'procedimiento'        => null,
+			'fecha_procedimiento'  => null,
+			'recordatorio_horas'   => 24,
+			'recordatorio_enviado' => 0,
+			'fecha_registro'       => current_time( 'mysql', true ),
+		);
+
+		$row = wp_parse_args( $data, $defaults );
+
+		$result = $wpdb->insert(
+			$wpdb->prefix . self::TABLE_REMINDERS,
+			$row
+		);
+
+		return $result ? (int) $wpdb->insert_id : false;
+	}
+
+	/**
+	 * Fetch a single reminder record by ID.
+	 *
+	 * @param int $id Reminder record ID.
+	 * @return object|null
+	 */
+	public static function get_reminder( $id ) {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_REMINDERS;
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d", (int) $id ) );
+	}
+
+	/**
+	 * Fetch a paginated list of reminder records, newest first.
+	 *
+	 * @param int $per_page
+	 * @param int $page 1-based.
+	 * @return array { items: array, total: int }
+	 */
+	public static function get_reminders( $per_page = 20, $page = 1 ) {
+		global $wpdb;
+
+		$table  = $wpdb->prefix . self::TABLE_REMINDERS;
+		$offset = ( max( 1, (int) $page ) - 1 ) * (int) $per_page;
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$items = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} ORDER BY fecha_registro DESC LIMIT %d OFFSET %d",
+				(int) $per_page,
+				(int) $offset
+			)
+		);
+
+		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
+		// phpcs:enable
+
+		return array(
+			'items' => $items ?: array(),
+			'total' => $total,
+		);
+	}
+
+	/**
+	 * Delete a reminder record.
+	 *
+	 * @param int $id Reminder record ID.
+	 * @return bool
+	 */
+	public static function delete_reminder( $id ) {
+		global $wpdb;
+		$result = $wpdb->delete(
+			$wpdb->prefix . self::TABLE_REMINDERS,
+			array( 'id' => (int) $id ),
+			array( '%d' )
+		);
+		return $result !== false;
+	}
+
+	/**
+	 * Get reminder records whose procedure is coming up within their recordatorio_horas
+	 * and whose reminder has not yet been sent.
+	 *
+	 * @return array
+	 */
+	public static function get_reminders_for_sending() {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_REMINDERS;
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return $wpdb->get_results(
+			"SELECT * FROM {$table}
+			 WHERE recordatorio_enviado = 0
+			   AND fecha_procedimiento IS NOT NULL
+			   AND fecha_procedimiento > UTC_TIMESTAMP()
+			   AND fecha_procedimiento <= DATE_ADD(UTC_TIMESTAMP(), INTERVAL recordatorio_horas HOUR)"
+		) ?: array();
+		// phpcs:enable
+	}
+
+	/**
+	 * Mark a reminder record as sent.
+	 *
+	 * @param int $id Reminder record ID.
+	 * @return bool
+	 */
+	public static function mark_reminder_record_sent( $id ) {
+		global $wpdb;
+		$result = $wpdb->update(
+			$wpdb->prefix . self::TABLE_REMINDERS,
+			array( 'recordatorio_enviado' => 1 ),
+			array( 'id' => (int) $id )
+		);
+		return $result !== false;
+	}
+
+	/**
+	 * Get reminder record statistics.
+	 *
+	 * @return array {
+	 *   total_con_fecha   int
+	 *   enviados          int
+	 *   pendientes        int
+	 *   sin_fecha         int
+	 * }
+	 */
+	public static function get_reminder_record_stats() {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_REMINDERS;
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$total_con_fecha = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE fecha_procedimiento IS NOT NULL" );
+		$enviados        = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE recordatorio_enviado = 1" );
+		$pendientes      = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$table}
+			 WHERE recordatorio_enviado = 0
+			   AND fecha_procedimiento IS NOT NULL
+			   AND fecha_procedimiento > UTC_TIMESTAMP()"
+		);
+		$sin_fecha       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE fecha_procedimiento IS NULL" );
+		// phpcs:enable
+
+		return array(
+			'total_con_fecha' => $total_con_fecha,
+			'enviados'        => $enviados,
+			'pendientes'      => $pendientes,
+			'sin_fecha'       => $sin_fecha,
+		);
 	}
 }

@@ -20,6 +20,13 @@
       }
     });
 
+    // ── Delete reminder record confirmation ───────────────────
+    $(document).on('click', '.bam-confirm-delete-reminder', function (e) {
+      if (!window.confirm(bamAdmin.i18n.confirmDeleteReminder)) {
+        e.preventDefault();
+      }
+    });
+
     // ── Manual reminder – confirmation checkbox unlock ────────
     var $confirmCheck  = $('#bam-reminder-confirm-check');
     var $reminderFields = $('#bam-reminder-fields');
