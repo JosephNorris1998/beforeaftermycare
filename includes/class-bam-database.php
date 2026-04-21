@@ -463,6 +463,76 @@ class BAM_Database {
 	// ── Reminders ─────────────────────────────────────────────────────────────
 
 	/**
+	 * Get reminder statistics across all patients.
+	 *
+	 * @return array {
+	 *   total_con_fecha   int  – patients with a procedure date set.
+	 *   enviados          int  – patients whose reminder has been sent.
+	 *   pendientes        int  – patients with a future procedure but reminder not yet sent.
+	 *   sin_fecha         int  – active patients with no procedure date.
+	 * }
+	 */
+	public static function get_reminder_stats() {
+		global $wpdb;
+		$table = $wpdb->prefix . self::TABLE_PATIENTS;
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$total_con_fecha = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE fecha_procedimiento IS NOT NULL" );
+		$enviados        = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE recordatorio_enviado = 1" );
+		$pendientes      = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$table}
+			 WHERE estado = 1
+			   AND recordatorio_enviado = 0
+			   AND fecha_procedimiento IS NOT NULL
+			   AND fecha_procedimiento > UTC_TIMESTAMP()"
+		);
+		$sin_fecha       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE estado = 1 AND fecha_procedimiento IS NULL" );
+		// phpcs:enable
+
+		return array(
+			'total_con_fecha' => $total_con_fecha,
+			'enviados'        => $enviados,
+			'pendientes'      => $pendientes,
+			'sin_fecha'       => $sin_fecha,
+		);
+	}
+
+	/**
+	 * Fetch a paginated list of patients that have a procedure date, ordered by procedure date.
+	 *
+	 * @param int $per_page
+	 * @param int $page     1-based.
+	 * @return array { items: array, total: int }
+	 */
+	public static function get_patients_with_reminders( $per_page = 20, $page = 1 ) {
+		global $wpdb;
+
+		$table  = $wpdb->prefix . self::TABLE_PATIENTS;
+		$offset = ( max( 1, (int) $page ) - 1 ) * (int) $per_page;
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$items = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, nombre, correo, procedimiento, fecha_procedimiento, recordatorio_enviado, recordatorio_horas, estado
+				 FROM {$table}
+				 WHERE fecha_procedimiento IS NOT NULL
+				 ORDER BY fecha_procedimiento ASC
+				 LIMIT %d OFFSET %d",
+				(int) $per_page,
+				(int) $offset
+			)
+		);
+
+		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE fecha_procedimiento IS NOT NULL" );
+		// phpcs:enable
+
+		return array(
+			'items' => $items ?: array(),
+			'total' => $total,
+		);
+	}
+
+	/**
 	 * Get patients whose procedure is coming up within their individual recordatorio_horas
 	 * and whose reminder has not yet been sent.
 	 *
