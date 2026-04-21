@@ -611,7 +611,6 @@ class BAM_Database {
 			'fecha_procedimiento'  => null,
 			'recordatorio_horas'   => 24,
 			'recordatorio_enviado' => 0,
-			'fecha_registro'       => current_time( 'mysql', true ),
 		);
 
 		$row = wp_parse_args( $data, $defaults );

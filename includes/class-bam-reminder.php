@@ -410,7 +410,7 @@ class BAM_Reminder {
 						id="bam_fecha_datetime_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
 						name="bam_fecha_datetime"
 						value="<?php echo esc_attr( $saved ? '' : $prefill_datetime ); ?>"
-						min="<?php echo esc_attr( wp_date( 'Y-m-d\TH:i' ) ); ?>"
+						min="<?php echo esc_attr( current_time( 'Y-m-d\TH:i' ) ); ?>"
 						required
 					>
 				</div>
