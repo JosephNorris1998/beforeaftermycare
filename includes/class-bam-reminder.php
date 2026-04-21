@@ -35,8 +35,12 @@ class BAM_Reminder {
 		return self::$instance;
 	}
 
+	/** WP-Cron hook for single patient reminders. */
+	const CRON_HOOK_SINGLE = 'bam_send_single_reminder';
+
 	private function __construct() {
-		add_action( self::CRON_HOOK, array( $this, 'check_reminders' ) );
+		add_action( self::CRON_HOOK,        array( $this, 'check_reminders' ) );
+		add_action( self::CRON_HOOK_SINGLE, array( $this, 'send_single_reminder' ), 10, 1 );
 		add_filter( 'wp_mail_from',      array( $this, 'mail_from' ) );
 		add_filter( 'wp_mail_from_name', array( $this, 'mail_from_name' ) );
 		add_shortcode( 'bam_recordatorio', array( $this, 'render_widget' ) );
@@ -238,6 +242,16 @@ class BAM_Reminder {
 			$this->send_confirmation_email( $patient );
 		}
 
+		// Schedule a single-event reminder at exactly 24 hours before the procedure.
+		if ( $patient && $ts > 0 ) {
+			$reminder_time = $ts - ( self::DEFAULT_HOURS * HOUR_IN_SECONDS );
+			// Clear any previously scheduled single reminder for this patient.
+			wp_clear_scheduled_hook( self::CRON_HOOK_SINGLE, array( (int) $patient->id ) );
+			if ( $reminder_time > time() ) {
+				wp_schedule_single_event( $reminder_time, self::CRON_HOOK_SINGLE, array( (int) $patient->id ) );
+			}
+		}
+
 		$referer  = wp_get_referer();
 		$redirect = add_query_arg( 'bam_reminder_saved', '1', $referer ?: home_url() );
 		wp_safe_redirect( $redirect );
@@ -261,8 +275,9 @@ class BAM_Reminder {
 		$error_key  = $uid ? 'bam_reminder_errors_' . $uid : null;
 		$errors     = array();
 		if ( $error_key ) {
-			$errors = (array) get_transient( $error_key );
-			if ( $errors ) {
+			$raw = get_transient( $error_key );
+			if ( is_array( $raw ) && ! empty( $raw ) ) {
+				$errors = $raw;
 				delete_transient( $error_key );
 			}
 		}
@@ -315,12 +330,12 @@ class BAM_Reminder {
 	</div>
 
 	<?php if ( $saved ) : ?>
-	<!-- Success notice -->
-	<div class="bam-reminder-notice bam-reminder-notice-success" role="status">
-		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-		<?php esc_html_e( '¡Listo! Tu cita ha sido registrada. Te enviamos un correo de confirmación y recibirás un recordatorio automático 24 horas antes de tu procedimiento.', 'beforeaftermycare' ); ?>
+	<!-- Success notice – form is hidden after successful registration -->
+	<div class="bam-reminder-notice bam-reminder-notice-success bam-reminder-notice-standalone" role="status">
+		<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+		<span><?php esc_html_e( 'Recordatorio programado exitosamente', 'beforeaftermycare' ); ?></span>
 	</div>
-	<?php endif; ?>
+	<?php else : ?>
 
 	<?php if ( ! empty( $errors ) ) : ?>
 	<!-- Error notice -->
@@ -376,71 +391,73 @@ class BAM_Reminder {
 				</label>
 			</div>
 
-			<!-- Nombre completo -->
-			<div class="bam-reminder-field">
-				<label for="bam_nombre_form_<?php echo esc_attr( $uid ?: 'guest' ); ?>">
-					<?php esc_html_e( 'Nombre completo:', 'beforeaftermycare' ); ?>
-					<span class="bam-required" aria-hidden="true">*</span>
-				</label>
-				<input
-					class="bam-input"
-					type="text"
-					id="bam_nombre_form_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
-					name="bam_nombre_form"
-					value="<?php echo esc_attr( $prefill_name ); ?>"
-					placeholder="<?php esc_attr_e( 'Ej: Juan Pérez', 'beforeaftermycare' ); ?>"
-					required
-				>
+			<!-- Two-column row: Nombre + Correo -->
+			<div class="bam-reminder-form-row">
+				<div class="bam-reminder-field">
+					<label for="bam_nombre_form_<?php echo esc_attr( $uid ?: 'guest' ); ?>">
+						<?php esc_html_e( 'Nombre completo:', 'beforeaftermycare' ); ?>
+						<span class="bam-required" aria-hidden="true">*</span>
+					</label>
+					<input
+						class="bam-input"
+						type="text"
+						id="bam_nombre_form_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
+						name="bam_nombre_form"
+						value="<?php echo esc_attr( $prefill_name ); ?>"
+						placeholder="<?php esc_attr_e( 'Ej: Juan Pérez', 'beforeaftermycare' ); ?>"
+						required
+					>
+				</div>
+
+				<div class="bam-reminder-field">
+					<label for="bam_correo_form_<?php echo esc_attr( $uid ?: 'guest' ); ?>">
+						<?php esc_html_e( 'Correo electrónico:', 'beforeaftermycare' ); ?>
+						<span class="bam-required" aria-hidden="true">*</span>
+					</label>
+					<input
+						class="bam-input"
+						type="email"
+						id="bam_correo_form_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
+						name="bam_correo_form"
+						value="<?php echo esc_attr( $prefill_email ); ?>"
+						placeholder="correo@ejemplo.com"
+						required
+					>
+				</div>
 			</div>
 
-			<!-- Correo electrónico -->
-			<div class="bam-reminder-field">
-				<label for="bam_correo_form_<?php echo esc_attr( $uid ?: 'guest' ); ?>">
-					<?php esc_html_e( 'Correo electrónico:', 'beforeaftermycare' ); ?>
-					<span class="bam-required" aria-hidden="true">*</span>
-				</label>
-				<input
-					class="bam-input"
-					type="email"
-					id="bam_correo_form_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
-					name="bam_correo_form"
-					value="<?php echo esc_attr( $prefill_email ); ?>"
-					placeholder="correo@ejemplo.com"
-					required
-				>
-			</div>
+			<!-- Two-column row: Fecha + Procedimiento -->
+			<div class="bam-reminder-form-row">
+				<div class="bam-reminder-field">
+					<label for="bam_fecha_datetime_<?php echo esc_attr( $uid ?: 'guest' ); ?>">
+						<?php esc_html_e( 'Fecha y hora:', 'beforeaftermycare' ); ?>
+						<span class="bam-required" aria-hidden="true">*</span>
+					</label>
+					<input
+						class="bam-input bam-datetime-local"
+						type="datetime-local"
+						id="bam_fecha_datetime_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
+						name="bam_fecha_datetime"
+						value="<?php echo esc_attr( $prefill_datetime ); ?>"
+						min="<?php echo esc_attr( current_time( 'Y-m-d\TH:i' ) ); ?>"
+						required
+					>
+				</div>
 
-			<!-- Fecha y hora -->
-			<div class="bam-reminder-field">
-				<label for="bam_fecha_datetime_<?php echo esc_attr( $uid ?: 'guest' ); ?>">
-					<?php esc_html_e( 'Fecha y hora:', 'beforeaftermycare' ); ?>
-					<span class="bam-required" aria-hidden="true">*</span>
-				</label>
-				<input
-					class="bam-input bam-datetime-local"
-					type="datetime-local"
-					id="bam_fecha_datetime_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
-					name="bam_fecha_datetime"
-					value="<?php echo esc_attr( $prefill_datetime ); ?>"
-					min="<?php echo esc_attr( current_time( 'Y-m-d\TH:i' ) ); ?>"
-					required
-				>
-			</div>
-
-			<!-- Procedimiento -->
-			<div class="bam-reminder-field">
-				<label for="bam_procedimiento_<?php echo esc_attr( $uid ?: 'guest' ); ?>">
-					<?php esc_html_e( 'Procedimiento:', 'beforeaftermycare' ); ?>
-				</label>
-				<select
-					class="bam-input"
-					id="bam_procedimiento_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
-					name="bam_procedimiento"
-				>
-					<option value="Colonoscopia" <?php selected( $prefill_proc, 'Colonoscopia' ); ?>>
-						<?php esc_html_e( 'Colonoscopia', 'beforeaftermycare' ); ?>
-					</option>
-				</select>
+				<div class="bam-reminder-field">
+					<label for="bam_procedimiento_<?php echo esc_attr( $uid ?: 'guest' ); ?>">
+						<?php esc_html_e( 'Procedimiento:', 'beforeaftermycare' ); ?>
+					</label>
+					<select
+						class="bam-input"
+						id="bam_procedimiento_<?php echo esc_attr( $uid ?: 'guest' ); ?>"
+						name="bam_procedimiento"
+					>
+						<option value="Colonoscopia" <?php selected( $prefill_proc, 'Colonoscopia' ); ?>>
+							<?php esc_html_e( 'Colonoscopia', 'beforeaftermycare' ); ?>
+						</option>
+					</select>
+				</div>
 			</div>
 
 			<button type="submit" name="bam_recordatorio_submit" value="1" class="bam-btn bam-btn-primary bam-btn-block">
@@ -454,6 +471,8 @@ class BAM_Reminder {
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
 		<?php esc_html_e( 'Al registrar tu cita recibirás un correo de confirmación y un recordatorio automático 24 horas antes de tu procedimiento.', 'beforeaftermycare' ); ?>
 	</div>
+
+	<?php endif; // $saved ?>
 
 </div>
 		<?php
@@ -477,8 +496,24 @@ class BAM_Reminder {
 	// ── Cron callback ─────────────────────────────────────────────────────────
 
 	/**
-	 * Cron callback: check for upcoming procedures and send reminder emails.
-	 * Uses per-patient recordatorio_horas for timing.
+	 * Single-event cron callback: send the reminder for one specific patient.
+	 * Scheduled at appointment registration time for exactly 24 h before the procedure.
+	 *
+	 * @param int $patient_id Patient ID.
+	 */
+	public function send_single_reminder( $patient_id ) {
+		$patient = BAM_Database::get_patient( (int) $patient_id );
+		if ( ! $patient || $patient->recordatorio_enviado ) {
+			return;
+		}
+		if ( $this->send_reminder_email( $patient ) ) {
+			BAM_Database::mark_reminder_sent( (int) $patient->id );
+		}
+	}
+
+	/**
+	 * Recurring cron callback: check for upcoming procedures and send reminder emails.
+	 * Acts as a safety net for reminders that may have been missed by the single event.
 	 */
 	public function check_reminders() {
 		$patients = BAM_Database::get_patients_for_reminder();
