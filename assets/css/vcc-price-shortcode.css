@@ -1,0 +1,87 @@
+/* ==========================================================================
+   VCC Price Shortcode – Frontend Styles
+   ========================================================================== */
+
+/* ── Price Only ─────────────────────────────────────────────────────────── */
+
+.vcc-price-only {
+	display: inline-block;
+	font-size: 28px;
+	font-weight: 700;
+	color: #1a7a1a;
+	line-height: 1.2;
+}
+
+/* ── Full Price Card ─────────────────────────────────────────────────────── */
+
+.vcc-price-card {
+	display: inline-flex;
+	flex-direction: column;
+	border: 1px solid #dde3e8;
+	border-radius: 6px;
+	overflow: hidden;
+	min-width: 220px;
+	font-size: 14px;
+	line-height: 1.4;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.vcc-price-card__header {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 10px 14px 8px;
+	background: #f5f7fa;
+	border-bottom: 1px solid #dde3e8;
+}
+
+.vcc-price-card__factory {
+	font-weight: 700;
+	color: #1e1e1e;
+	font-size: 13px;
+}
+
+.vcc-price-card__size {
+	color: #555;
+	font-size: 12px;
+}
+
+.vcc-price-card__body {
+	padding: 10px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.vcc-price-card__row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+}
+
+.vcc-price-card__label {
+	color: #555;
+	font-size: 13px;
+}
+
+.vcc-price-card__value {
+	font-weight: 600;
+	color: #1e1e1e;
+	font-size: 13px;
+}
+
+.vcc-price-card__row--markup .vcc-price-card__value {
+	color: #b45309;
+}
+
+.vcc-price-card__row--total {
+	margin-top: 4px;
+	padding-top: 6px;
+	border-top: 1px solid #dde3e8;
+}
+
+.vcc-price-card__total {
+	font-size: 16px;
+	color: #1a7a1a;
+}

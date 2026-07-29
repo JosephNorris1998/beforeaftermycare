@@ -31,6 +31,8 @@ require_once BAM_PLUGIN_DIR . 'includes/class-bam-admin.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-frontend-dashboard.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-survey.php';
 require_once BAM_PLUGIN_DIR . 'includes/class-bam-reminder.php';
+require_once BAM_PLUGIN_DIR . 'includes/class-vcc-font-price-tools.php';
+require_once BAM_PLUGIN_DIR . 'includes/class-vcc-price-shortcode.php';
 
 // ── Activation / Deactivation hooks ──────────────────────────────────────────
 register_activation_hook( __FILE__, 'bam_activate' );
@@ -74,4 +76,6 @@ function bam_init() {
 	BAM_Frontend_Dashboard::get_instance();
 	BAM_Survey::get_instance();
 	BAM_Reminder::get_instance();
+	VCC_Font_Price_Tools::get_instance();
+	VCC_Price_Shortcode::get_instance();
 }
